@@ -15,8 +15,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Navigate to project directory
-        run: cd ~/3-tier-docker-compose-monitoring-ubuntu
+      - name: Pull latest code
+        run: |
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          git fetch origin main
+          git reset --hard origin/main
+          git pull origin main
 
       - name: Build application images
         run: |

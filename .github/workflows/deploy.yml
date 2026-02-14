@@ -1,4 +1,4 @@
-name: Build and Deploy with Self-Hosted Runner
+name: Deploy Application
 
 on:
   push:

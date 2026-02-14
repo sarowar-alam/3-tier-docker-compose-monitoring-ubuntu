@@ -1,0 +1,108 @@
+name: Deploy to AWS EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
+          ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
+            set -e
+            
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to project directory
+            cd ~/3-tier-docker-compose-ubuntu
+            
+            # Pull latest code
+            echo "📥 Pulling latest code from GitHub..."
+            git pull origin main
+            
+            # Pull latest Docker images
+            echo "🐳 Pulling latest Docker images..."
+            docker compose pull
+            
+            # Restart services with zero-downtime
+            echo "♻️  Restarting services..."
+            docker compose up -d --no-deps --build
+            
+            # Wait for health checks
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 10
+            
+            # Check service status
+            echo "✅ Service Status:"
+            docker compose ps
+            
+            # Clean up old images
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af --filter "until=24h"
+            
+            echo "✅ Deployment completed successfully!"
+          EOF
+
+      - name: Verify Deployment
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
+            # Test backend health
+            if curl -f http://localhost:3000/health > /dev/null 2>&1; then
+              echo "✅ Backend is healthy"
+            else
+              echo "❌ Backend health check failed"
+              exit 1
+            fi
+            
+            # Test frontend
+            if curl -f http://localhost > /dev/null 2>&1; then
+              echo "✅ Frontend is accessible"
+            else
+              echo "❌ Frontend is not accessible"
+              exit 1
+            fi
+          EOF
+
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Deployment to EC2 completed!"
+          echo "Application URL: http://${{ secrets.EC2_HOST }}"
+          echo "Grafana: http://${{ secrets.EC2_HOST }}:3001"

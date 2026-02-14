@@ -1,0 +1,50 @@
+# Production Docker Compose Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  # Backend - Use pre-built image from Docker Hub
+  backend:
+    image: ${DOCKERHUB_USERNAME}/bmi-backend:latest
+    build: null  # Override build, use image instead
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: always
+
+  # Frontend - Use pre-built image from Docker Hub
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/bmi-frontend:latest
+    build: null  # Override build, use image instead
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    restart: always
+
+  # PostgreSQL - Add resource limits
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"

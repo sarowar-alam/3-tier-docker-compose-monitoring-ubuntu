@@ -18,20 +18,30 @@ jobs:
       - name: Navigate to project directory
         run: cd ~/3-tier-docker-compose-monitoring-ubuntu
 
-      - name: Build and restart application
+      - name: Build application images
         run: |
           set -e
-          echo "Building Docker images..."
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          echo "Building Phase 1 application images..."
           docker compose -f docker-compose.yml build --no-cache
           
-          echo "Restarting application containers..."
-          docker compose -f docker-compose.yml up -d --force-recreate --no-deps backend frontend
+      - name: Deploy application with monitoring
+        run: |
+          set -e
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          echo "Deploying application containers (Phase 1)..."
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --force-recreate --no-deps backend frontend
           
-          echo "Waiting for containers to start..."
-          sleep 10
+          echo "Ensuring monitoring stack is running (Phase 2)..."
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d prometheus grafana loki promtail cadvisor node-exporter
+          
+          echo "Waiting for services to stabilize..."
+          sleep 15
 
       - name: Health check
         run: |
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          
           echo "Checking backend health..."
           if docker compose exec -T frontend curl -f http://backend:3000/health > /dev/null 2>&1; then
             echo "✓ Backend is healthy"
@@ -47,18 +57,43 @@ jobs:
             echo "✗ Frontend is not accessible"
             exit 1
           fi
+          
+          echo "Checking Grafana..."
+          if curl -f http://localhost:3001 > /dev/null 2>&1; then
+            echo "✓ Grafana is accessible"
+          else
+            echo "⚠ Grafana check failed (may still be starting)"
+          fi
+          
+          echo "Checking Prometheus..."
+          if curl -f http://localhost:9090/-/healthy > /dev/null 2>&1; then
+            echo "✓ Prometheus is healthy"
+          else
+            echo "⚠ Prometheus check failed"
+          fi
 
       - name: Show container status
-        run: docker compose ps
+        run: |
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          echo "=== All Container Status ==="
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 
       - name: Cleanup old images
         run: docker image prune -af --filter "until=24h"
 
       - name: Deployment summary
         run: |
+          PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           echo "=========================================="
-          echo "Deployment completed successfully!"
+          echo "✅ Deployment completed successfully!"
           echo "=========================================="
-          echo "Application: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
-          echo "Grafana: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):3001"
+          echo "Phase 1 - Application:"
+          echo "  Frontend: http://${PUBLIC_IP}"
+          echo "  Backend API: http://${PUBLIC_IP}:3000 (internal)"
+          echo ""
+          echo "Phase 2 - Monitoring:"
+          echo "  Grafana: http://${PUBLIC_IP}:3001"
+          echo "  Prometheus: http://${PUBLIC_IP}:9090"
+          echo ""
+          echo "Total Containers: 9 (3 app + 6 monitoring)"
           echo "=========================================="

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Node Exporter - Collects host system metrics
   node-exporter:

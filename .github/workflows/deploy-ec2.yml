@@ -1,4 +1,4 @@
-name: Deploy to AWS EC2
+name: Manual Deployment (Self-Hosted)
 
 on:
   workflow_dispatch:
@@ -11,93 +11,79 @@ on:
         options:
           - production
           - staging
-  workflow_run:
-    workflows: ["Build and Push Docker Images"]
-    types:
-      - completed
 
 jobs:
   deploy:
-    name: Deploy to EC2
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    name: Deploy Application
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
+      - name: Pull latest changes
         run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          git pull origin main
 
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      - name: Build images
         run: |
-          ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
-            set -e
-            
-            echo "Starting deployment..."
-            
-            # Navigate to project directory
-            cd ~/3-tier-docker-compose-monitoring-ubuntu
-            
-            # Pull latest code
-            echo "Pulling latest code from GitHub..."
-            git pull origin main
-            
-            # Pull latest Docker images
-            echo "Pulling latest Docker images..."
-            docker compose pull
-            
-            # Restart services with zero-downtime
-            echo "Restarting services..."
-            docker compose up -d --no-deps --build
-            
-            # Wait for health checks
-            echo "Waiting for services to be healthy..."
-            sleep 10
-            
-            # Check service status
-            echo "Service Status:"
-            docker compose ps
-            
-            # Clean up old images
-            echo "Cleaning up old images..."
-            docker image prune -af --filter "until=24h"
-            
-            echo "Deployment completed successfully!"
-          EOF
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          docker compose -f docker-compose.yml build
 
-      - name: Verify Deployment
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
+      - name: Deploy with monitoring stack
         run: |
-          ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
-            # Test backend health
-            if curl -f http://localhost:3000/health > /dev/null 2>&1; then
-              echo "SUCCESS: Backend is healthy"
-            else
-              echo "ERROR: Backend health check failed"
-              exit 1
-            fi
-            
-            # Test frontend
-            if curl -f http://localhost > /dev/null 2>&1; then
-              echo "SUCCESS: Frontend is accessible"
-            else
-              echo "ERROR: Frontend is not accessible"
-              exit 1
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --force-recreate --no-deps backend frontend
+
+      - name: Wait for services
+        run: sleep 15
+
+      - name: Verify deployment
+        run: |
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          
+          # Check backend
+          if docker compose exec -T frontend curl -f http://backend:3000/health > /dev/null 2>&1; then
+            echo "SUCCESS: Backend is healthy"
+          else
+            echo "ERROR: Backend health check failed"
+            exit 1
+          fi
+          
+          # Check frontend
+          if curl -f http://localhost > /dev/null 2>&1; then
+            echo "SUCCESS: Frontend is accessible"
+          else
+            echo "ERROR: Frontend is not accessible"
+            exit 1
+          fi
+          
+          # Check Grafana
+          if curl -f http://localhost:3001 > /dev/null 2>&1; then
+            echo "SUCCESS: Grafana is accessible"
+          else
+            echo "WARNING: Grafana check failed"
+          fi
+
+      - name: Container status
+        run: |
+          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
+
+      - name: Cleanup
+        run: docker image prune -af --filter "until=24h"
+
+      - name: Deployment summary
+        run: |
+          PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+          echo "=========================================="
+          echo "Deployment to ${{ inputs.environment }} completed!"
+          echo "=========================================="
+          echo "Application: http://${PUBLIC_IP}"
+          echo "Grafana: http://${PUBLIC_IP}:3001"
+          echo "Prometheus: http://${PUBLIC_IP}:9090"
+          echo "=========================================="
             fi
           EOF
 

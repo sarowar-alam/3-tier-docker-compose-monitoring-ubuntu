@@ -32,19 +32,13 @@ ruler:
 # Retention configuration
 limits_config:
   retention_period: 168h  # 7 days
-  enforce_metric_name: false
   reject_old_samples: true
   reject_old_samples_max_age: 168h
 
 # Compactor for log retention
 compactor:
   working_directory: /loki/compactor
-  shared_store: filesystem
   compaction_interval: 10m
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
-
-# Query limits
-query_range:
-  max_query_length: 721h  # 30 days

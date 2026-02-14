@@ -24,7 +24,7 @@
       },
       "targets": [
         {
-          "expr": "{container_name=~\"bmi-.*\"}",
+          "expr": "{job=\"docker\", service=~\"backend|frontend|postgres\"}",
           "refId": "A"
         }
       ],
@@ -45,8 +45,8 @@
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
       "targets": [
         {
-          "expr": "sum(count_over_time({container_name=~\"bmi-.*\"}[1m])) by (container_name)",
-          "legendFormat": "{{container_name}}",
+          "expr": "sum(count_over_time({job=\"docker\", service=~\"backend|frontend|postgres\"}[1m])) by (service)",
+          "legendFormat": "{{service}}",
           "refId": "A"
         }
       ],
@@ -69,7 +69,7 @@
       },
       "targets": [
         {
-          "expr": "{container_name=~\"bmi-.*\"} |~ \"(?i)error|exception|fail\"",
+          "expr": "{job=\"docker\", service=~\"backend|frontend|postgres\"} |~ \"(?i)error|exception|fail\"",
           "refId": "A"
         }
       ],

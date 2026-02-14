@@ -4,6 +4,34 @@
 
 set -e
 
+# Function to get EC2 public IP with IMDSv2 support
+get_ec2_public_ip() {
+    # Try to get token for IMDSv2
+    local TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+        -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" \
+        --connect-timeout 2 2>/dev/null)
+    
+    if [ -n "$TOKEN" ]; then
+        # Use IMDSv2 with token
+        local PUBLIC_IP=$(curl -s \
+            -H "X-aws-ec2-metadata-token: $TOKEN" \
+            --connect-timeout 2 \
+            http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null)
+    else
+        # Fallback to IMDSv1
+        local PUBLIC_IP=$(curl -s --connect-timeout 2 \
+            http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null)
+    fi
+    
+    # If still empty, try external service
+    if [ -z "$PUBLIC_IP" ]; then
+        PUBLIC_IP=$(curl -s --connect-timeout 2 ifconfig.me 2>/dev/null || echo "YOUR_EC2_IP")
+    fi
+    
+    # Trim whitespace and return
+    echo "$PUBLIC_IP" | tr -d '[:space:]'
+}
+
 echo "=========================================="
 echo "Docker Compose Health Check"
 echo "=========================================="
@@ -102,7 +130,7 @@ if [ $RUNNING -eq $TOTAL ]; then
     echo -e "${GREEN}SUCCESS: All checks passed! Application is healthy.${NC}"
     echo ""
     echo "Access your application at:"
-    echo "  http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'YOUR_EC2_IP')"
+    echo "  http://$(get_ec2_public_ip)"
 else
     echo -e "${YELLOW}WARNING: Some services may need attention.${NC}"
     echo ""

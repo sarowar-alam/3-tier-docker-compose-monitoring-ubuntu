@@ -4,6 +4,34 @@
 
 set -e
 
+# Function to get EC2 public IP with IMDSv2 support
+get_ec2_public_ip() {
+    # Try to get token for IMDSv2
+    local TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+        -H "X-aws-ec2-metadata-token-ttl-seconds: 21600" \
+        --connect-timeout 2 2>/dev/null)
+    
+    if [ -n "$TOKEN" ]; then
+        # Use IMDSv2 with token
+        local PUBLIC_IP=$(curl -s \
+            -H "X-aws-ec2-metadata-token: $TOKEN" \
+            --connect-timeout 2 \
+            http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null)
+    else
+        # Fallback to IMDSv1
+        local PUBLIC_IP=$(curl -s --connect-timeout 2 \
+            http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null)
+    fi
+    
+    # If still empty, try external service
+    if [ -z "$PUBLIC_IP" ]; then
+        PUBLIC_IP=$(curl -s --connect-timeout 2 ifconfig.me 2>/dev/null || echo "localhost")
+    fi
+    
+    # Trim whitespace and return
+    echo "$PUBLIC_IP" | tr -d '[:space:]'
+}
+
 echo "=========================================="
 echo "Starting BMI Health Tracker"
 echo "with Full Monitoring Stack"
@@ -69,7 +97,7 @@ echo "=========================================="
 echo ""
 
 # Get public IP
-PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "localhost")
+PUBLIC_IP=$(get_ec2_public_ip)
 
 echo "Access URLs:"
 echo "  Application:    http://${PUBLIC_IP}"

@@ -69,30 +69,6 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "thresholds"},
-          "mappings": [
-            {"options": {"0": {"color": "red", "index": 0, "text": "Down"}}, "type": "value"},
-            {"options": {"1": {"color": "green", "index": 1, "text": "Up"}}, "type": "value"}
-          ],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}
-        }
-      },
-      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 8},
-      "id": 3,
-      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "text": {}, "textMode": "auto"},
-      "targets": [
-        {
-          "expr": "up{job=\"backend\"}",
-          "refId": "A"
-        }
-      ],
-      "title": "Backend Status",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
           "color": {"mode": "palette-classic"},
           "mappings": [],
           "unit": "Bps"

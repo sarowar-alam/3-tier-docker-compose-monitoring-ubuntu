@@ -9,7 +9,10 @@
   "links": [],
   "panels": [
     {
-      "datasource": "Loki",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
       "gridPos": {"h": 12, "w": 24, "x": 0, "y": 0},
       "id": 1,
       "options": {
@@ -17,14 +20,20 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": false
+        "wrapLogMessage": true
       },
       "targets": [
         {
-          "expr": "{job=\"docker\", service=~\"backend|frontend|postgres\"}",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"docker\", container_name=~\"/bmi-.*\"}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
@@ -32,7 +41,10 @@
       "type": "logs"
     },
     {
-      "datasource": "Loki",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
@@ -45,8 +57,14 @@
       "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
       "targets": [
         {
-          "expr": "sum(count_over_time({job=\"docker\", service=~\"backend|frontend|postgres\"}[1m])) by (service)",
-          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({job=\"docker\", container_name=~\"/bmi-.*\"}[1m])) by (container_name)",
+          "legendFormat": "{{container_name}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
@@ -54,7 +72,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Loki",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
       "id": 3,
       "options": {
@@ -62,14 +83,20 @@
         "enableLogDetails": true,
         "prettifyLogMessage": false,
         "showCommonLabels": false,
-        "showLabels": false,
+        "showLabels": true,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": false
+        "wrapLogMessage": true
       },
       "targets": [
         {
-          "expr": "{job=\"docker\", service=~\"backend|frontend|postgres\"} |~ \"(?i)error|exception|fail\"",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "{job=\"docker\", container_name=~\"/bmi-.*\"} |~ \"(?i)error|exception|fail\"",
+          "queryType": "range",
           "refId": "A"
         }
       ],

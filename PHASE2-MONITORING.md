@@ -187,14 +187,13 @@ This script:
 
 ### Option B: Start Monitoring Manually
 
-Start monitoring stack alongside your app:
+Start both application and monitoring together:
 
 ```bash
-# Application should already be running from Phase 1
-docker compose ps
+# Start application + monitoring as a single project
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
-# Start monitoring stack
-docker compose -f docker-compose.monitoring.yml up -d
+# This ensures all services can discover each other via Docker DNS
 ```
 
 ---
@@ -204,8 +203,8 @@ docker compose -f docker-compose.monitoring.yml up -d
 ### Check Container Status
 
 ```bash
-# View all monitoring containers
-docker compose -f docker-compose.monitoring.yml ps
+# View all containers (application + monitoring)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 ```
 
 **Expected output:**
@@ -405,41 +404,39 @@ node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100
 
 ## Common Commands Reference
 
-### Managing Monitoring Stack
-
-```bash
-# Start monitoring
-docker compose -f docker-compose.monitoring.yml up -d
-
-# Stop monitoring
-docker compose -f docker-compose.monitoring.yml down
-
-# Restart monitoring
-docker compose -f docker-compose.monitoring.yml restart
-
-# View logs
-docker compose -f docker-compose.monitoring.yml logs -f [service]
-
-# Rebuild monitoring services
-docker compose -f docker-compose.monitoring.yml up -d --build
-```
-
-### Combined Application + Monitoring
+### Managing Application + Monitoring
 
 ```bash
 # Start both
-bash scripts/start-with-monitoring.sh
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
 # Stop both
-docker compose down
-docker compose -f docker-compose.monitoring.yml down
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
+
+# Restart specific service
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart [service]
+
+# View logs
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f [service]
+
+# Rebuild all services
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+```
+
+### Quick Commands
+
+```bash
+# Start using script (recommended)
+bash scripts/start-with-monitoring.sh
+
+# Stop all services
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
 
 # View all containers
-docker ps
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 
 # View all logs
-docker compose logs -f && \
-docker compose -f docker-compose.monitoring.yml logs -f
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f
 ```
 
 ---
@@ -466,7 +463,7 @@ sudo netstat -tulpn | grep 3001
 
 **Check Grafana container:**
 ```bash
-docker compose -f docker-compose.monitoring.yml logs grafana
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs grafana
 ```
 
 ### Issue: High memory usage on EC2
@@ -502,10 +499,10 @@ docker network inspect bmi-backend-network
 
 **Check Promtail is collecting:**
 ```bash
-docker compose -f docker-compose.monitoring.yml logs promtail
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs promtail
 
 # Verify Docker socket is mounted
-docker compose -f docker-compose.monitoring.yml exec promtail ls -la /var/lib/docker/containers
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml exec promtail ls -la /var/lib/docker/containers
 ```
 
 ---
@@ -523,7 +520,7 @@ global:
 
 Restart Prometheus:
 ```bash
-docker compose -f docker-compose.monitoring.yml restart prometheus
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart prometheus
 ```
 
 ### Limit Log Retention
@@ -536,7 +533,7 @@ limits_config:
 
 Restart Loki:
 ```bash
-docker compose -f docker-compose.monitoring.yml restart loki
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart loki
 ```
 
 ---
@@ -656,17 +653,17 @@ Prometheus:   http://YOUR_EC2_IP:9090
 
 ### Key Commands:
 ```bash
-# Start monitoring
-docker compose -f docker-compose.monitoring.yml up -d
+# Start application + monitoring
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
 # Check status
-docker compose -f docker-compose.monitoring.yml ps
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 
 # View logs
-docker compose -f docker-compose.monitoring.yml logs -f grafana
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f grafana
 
-# Stop monitoring
-docker compose -f docker-compose.monitoring.yml down
+# Stop all services
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
 ```
 
 ### Useful Queries:

@@ -159,7 +159,7 @@ docker compose up -d
 ### Add Phase 2 (Monitoring)
 ```bash
 # On EC2 (after Phase 1 is running)
-docker compose -f docker-compose.monitoring.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 # Access Grafana: http://YOUR_EC2_IP:3001
 ```
 

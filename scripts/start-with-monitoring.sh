@@ -54,41 +54,20 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# Start main application
-echo "[1/2] Starting main application stack..."
-docker compose up -d
+# Start both application and monitoring together
+echo "Starting application + monitoring stack..."
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
 
 echo ""
-echo "Waiting for application to become healthy..."
-sleep 20
-
-# Check application health
-if docker compose ps | grep -q "healthy"; then
-    echo "SUCCESS: Application is healthy"
-else
-    echo "WARNING: Application may not be fully ready yet"
-fi
-
-echo ""
-echo "[2/2] Starting monitoring stack..."
-docker compose -f docker-compose.monitoring.yml up -d
-
-echo ""
-echo "Waiting for monitoring services to start..."
-sleep 15
+echo "Waiting for all services to become healthy..."
+sleep 30
 
 # Display status
 echo ""
 echo "=========================================="
 echo "Service Status"
 echo "=========================================="
-echo ""
-echo "Main Application:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
-
-echo ""
-echo "Monitoring Stack:"
-docker compose -f docker-compose.monitoring.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 
 echo ""
 echo "=========================================="
@@ -103,13 +82,11 @@ echo "Access URLs:"
 echo "  Application:    http://${PUBLIC_IP}"
 echo "  Grafana:        http://${PUBLIC_IP}:3001 (admin/admin)"
 echo "  Prometheus:     http://${PUBLIC_IP}:9090"
-echo "  Backend Health: http://${PUBLIC_IP}:3000/health"
 echo ""
 echo "View logs:"
-echo "  docker compose logs -f"
-echo "  docker compose -f docker-compose.monitoring.yml logs -f grafana"
+echo "  docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f"
+echo "  docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f grafana"
 echo ""
 echo "Stop all services:"
-echo "  docker compose down"
-echo "  docker compose -f docker-compose.monitoring.yml down"
+echo "  docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down"
 echo ""

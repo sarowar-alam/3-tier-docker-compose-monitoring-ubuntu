@@ -215,7 +215,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"} |~ \"bmi-frontend\"",
+          "expr": "{job=\"docker\", container_name=\"/bmi-frontend\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -252,7 +252,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"} |~ \"bmi-backend\"",
+          "expr": "{job=\"docker\", container_name=\"/bmi-backend\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -289,7 +289,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"} |~ \"bmi-postgres\"",
+          "expr": "{job=\"docker\", container_name=\"/bmi-postgres\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -326,7 +326,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"} |~ \"bmi-frontend\" |~ \"(?i)GET|POST|PUT|DELETE\"",
+          "expr": "{job=\"docker\", container_name=\"/bmi-frontend\"} |~ \"(?i)GET|POST|PUT|DELETE\"",
           "queryType": "range",
           "refId": "A"
         }

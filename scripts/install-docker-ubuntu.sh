@@ -11,7 +11,7 @@ echo ""
 
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then 
-    echo "⚠️  Please do not run as root. Run as ubuntu user."
+    echo "WARNING: Please do not run as root. Run as ubuntu user."
     exit 1
 fi
 
@@ -57,13 +57,13 @@ sudo systemctl start docker
 
 echo ""
 echo "=========================================="
-echo "✅ Docker Installation Complete!"
+echo "Docker Installation Complete!"
 echo "=========================================="
 echo ""
 docker --version
 docker compose version
 echo ""
-echo "⚠️  IMPORTANT: Please log out and log back in for docker group changes to take effect!"
+echo "IMPORTANT: Please log out and log back in for docker group changes to take effect!"
 echo ""
 echo "After logging back in, verify with:"
 echo "  docker ps"

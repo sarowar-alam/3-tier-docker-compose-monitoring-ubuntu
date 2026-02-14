@@ -515,3 +515,14 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 **Ready to deploy?** Follow [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md) for step-by-step instructions! 🚀
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

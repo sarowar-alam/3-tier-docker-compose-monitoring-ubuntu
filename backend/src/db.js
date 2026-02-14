@@ -17,10 +17,10 @@ pool.on('error', (err, client) => {
 // Test connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
-    console.error('❌ Database connection failed:', err.message);
+    console.error('ERROR: Database connection failed:', err.message);
     process.exit(1);
   } else {
-    console.log('✅ Database connected successfully at:', res.rows[0].now);
+    console.log('SUCCESS: Database connected successfully at:', res.rows[0].now);
   }
 });
 

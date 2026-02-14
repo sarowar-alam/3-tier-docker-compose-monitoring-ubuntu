@@ -46,36 +46,36 @@ jobs:
           ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
             set -e
             
-            echo "🚀 Starting deployment..."
+            echo "Starting deployment..."
             
             # Navigate to project directory
             cd ~/3-tier-docker-compose-monitoring-ubuntu
             
             # Pull latest code
-            echo "📥 Pulling latest code from GitHub..."
+            echo "Pulling latest code from GitHub..."
             git pull origin main
             
             # Pull latest Docker images
-            echo "🐳 Pulling latest Docker images..."
+            echo "Pulling latest Docker images..."
             docker compose pull
             
             # Restart services with zero-downtime
-            echo "♻️  Restarting services..."
+            echo "Restarting services..."
             docker compose up -d --no-deps --build
             
             # Wait for health checks
-            echo "⏳ Waiting for services to be healthy..."
+            echo "Waiting for services to be healthy..."
             sleep 10
             
             # Check service status
-            echo "✅ Service Status:"
+            echo "Service Status:"
             docker compose ps
             
             # Clean up old images
-            echo "🧹 Cleaning up old images..."
+            echo "Cleaning up old images..."
             docker image prune -af --filter "until=24h"
             
-            echo "✅ Deployment completed successfully!"
+            echo "Deployment completed successfully!"
           EOF
 
       - name: Verify Deployment
@@ -86,23 +86,23 @@ jobs:
           ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
             # Test backend health
             if curl -f http://localhost:3000/health > /dev/null 2>&1; then
-              echo "✅ Backend is healthy"
+              echo "SUCCESS: Backend is healthy"
             else
-              echo "❌ Backend health check failed"
+              echo "ERROR: Backend health check failed"
               exit 1
             fi
             
             # Test frontend
             if curl -f http://localhost > /dev/null 2>&1; then
-              echo "✅ Frontend is accessible"
+              echo "SUCCESS: Frontend is accessible"
             else
-              echo "❌ Frontend is not accessible"
+              echo "ERROR: Frontend is not accessible"
               exit 1
             fi
           EOF
 
       - name: Deployment Summary
         run: |
-          echo "🎉 Deployment to EC2 completed!"
+          echo "Deployment to EC2 completed successfully!"
           echo "Application URL: http://${{ secrets.EC2_HOST }}"
           echo "Grafana: http://${{ secrets.EC2_HOST }}:3001"

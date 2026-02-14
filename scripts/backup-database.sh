@@ -29,12 +29,12 @@ mkdir -p "$BACKUP_DIR"
 
 # Check if container is running
 if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-    echo -e "${RED}❌ Container ${CONTAINER_NAME} is not running${NC}"
+    echo -e "${RED}ERROR: Container ${CONTAINER_NAME} is not running${NC}"
     exit 1
 fi
 
 # Create backup
-echo "📦 Creating backup of database: ${DB_NAME}"
+echo "Creating backup of database: ${DB_NAME}"
 echo "Backup file: ${BACKUP_FILE}"
 echo ""
 
@@ -42,46 +42,46 @@ docker compose exec -T postgres pg_dump -U "$DB_USER" "$DB_NAME" > "$BACKUP_FILE
 
 if [ $? -eq 0 ]; then
     BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-    echo -e "${GREEN}✅ Backup created successfully!${NC}"
+    echo -e "${GREEN}SUCCESS: Backup created successfully!${NC}"
     echo "Size: ${BACKUP_SIZE}"
     echo "Location: ${BACKUP_FILE}"
 else
-    echo -e "${RED}❌ Backup failed${NC}"
+    echo -e "${RED}ERROR: Backup failed${NC}"
     exit 1
 fi
 
 # Compress backup
 echo ""
-echo "🗜️  Compressing backup..."
+echo "Compressing backup..."
 gzip "$BACKUP_FILE"
 COMPRESSED_FILE="${BACKUP_FILE}.gz"
 COMPRESSED_SIZE=$(du -h "$COMPRESSED_FILE" | cut -f1)
-echo -e "${GREEN}✅ Backup compressed${NC}"
+echo -e "${GREEN}SUCCESS: Backup compressed${NC}"
 echo "Compressed size: ${COMPRESSED_SIZE}"
 echo "File: ${COMPRESSED_FILE}"
 
 # Optional: Upload to S3 (uncomment if you use AWS S3)
 # if [ -n "$AWS_S3_BUCKET" ]; then
 #     echo ""
-#     echo "☁️  Uploading to S3..."
+#     echo "Uploading to S3..."
 #     aws s3 cp "$COMPRESSED_FILE" "s3://${AWS_S3_BUCKET}/backups/"
 #     if [ $? -eq 0 ]; then
-#         echo -e "${GREEN}✅ Uploaded to S3${NC}"
+#         echo -e "${GREEN}SUCCESS: Uploaded to S3${NC}"
 #     else
-#         echo -e "${YELLOW}⚠️  S3 upload failed${NC}"
+#         echo -e "${YELLOW}WARNING: S3 upload failed${NC}"
 #     fi
 # fi
 
 # Clean up old backups
 echo ""
-echo "🧹 Cleaning up backups older than ${RETENTION_DAYS} days..."
+echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
 find "$BACKUP_DIR" -name "bmidb_backup_*.sql.gz" -mtime +${RETENTION_DAYS} -delete
 REMAINING=$(ls -1 "$BACKUP_DIR"/bmidb_backup_*.sql.gz 2>/dev/null | wc -l)
 echo "Backups remaining: ${REMAINING}"
 
 echo ""
 echo "=========================================="
-echo -e "${GREEN}✅ Backup completed successfully!${NC}"
+echo -e "${GREEN}Backup completed successfully!${NC}"
 echo "=========================================="
 echo ""
 echo "To restore this backup, run:"

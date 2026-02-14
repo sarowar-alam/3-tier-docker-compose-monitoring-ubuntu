@@ -899,3 +899,14 @@ You've built a **complete production-grade** deployment pipeline:
 ✅ Industry-standard DevOps practices
 
 **You're now ready for production! 🚀**
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

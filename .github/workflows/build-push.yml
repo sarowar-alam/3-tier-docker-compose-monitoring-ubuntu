@@ -91,6 +91,6 @@ jobs:
     steps:
       - name: Summary
         run: |
-          echo "✅ All Docker images built and pushed successfully!"
+          echo "All Docker images built and pushed successfully!"
           echo "Backend: ${{ env.BACKEND_IMAGE }}:latest"
           echo "Frontend: ${{ env.FRONTEND_IMAGE }}:latest"

@@ -788,3 +788,14 @@ You've built something impressive! This is a **production-ready** setup that man
 ---
 
 **Happy Coding and Deploying!**
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

@@ -77,8 +77,8 @@ echo ""
 
 # Check backend health endpoint
 echo "2. Backend Health Check:"
-if curl -s -f http://localhost:3000/health > /dev/null 2>&1; then
-    HEALTH=$(curl -s http://localhost:3000/health)
+if docker compose exec -T frontend curl -s -f http://backend:3000/health > /dev/null 2>&1; then
+    HEALTH=$(docker compose exec -T frontend curl -s http://backend:3000/health)
     echo -e "${GREEN}SUCCESS: Backend is healthy${NC}"
     echo "Response: $HEALTH"
 else

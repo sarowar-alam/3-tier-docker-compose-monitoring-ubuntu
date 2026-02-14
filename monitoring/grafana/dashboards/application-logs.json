@@ -32,7 +32,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\", container_name=~\"/bmi-.*\"}",
+          "expr": "{container_name=~\"/bmi-.*\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -62,7 +62,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum(rate({job=\"docker\", container_name=~\"/bmi-.*\"}[1m])) by (container_name)",
+          "expr": "sum(rate({container_name=~\"/bmi-.*\"}[1m])) by (container_name)",
           "legendFormat": "{{container_name}}",
           "queryType": "range",
           "refId": "A"
@@ -95,7 +95,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\", container_name=~\"/bmi-.*\"} |~ \"(?i)error|exception|fail\"",
+          "expr": "{container_name=~\"/bmi-.*\"} |~ \"(?i)error|exception|fail\"",
           "queryType": "range",
           "refId": "A"
         }

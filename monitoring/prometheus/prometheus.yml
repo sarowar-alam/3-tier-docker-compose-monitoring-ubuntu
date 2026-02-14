@@ -38,15 +38,16 @@ scrape_configs:
         regex: 'container_tasks_state|container_memory_failures_total'
         action: drop
 
-  # Backend health endpoint
-  - job_name: 'backend'
-    metrics_path: '/health'
-    static_configs:
-      - targets: ['backend:3000']
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: 'bmi-backend'
+  # Backend health endpoint - Commented out as it returns JSON, not Prometheus metrics
+  # To enable metrics, add a /metrics endpoint to backend that returns Prometheus format
+  # - job_name: 'backend'
+  #   metrics_path: '/metrics'
+  #   static_configs:
+  #     - targets: ['backend:3000']
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: instance
+  #       replacement: 'bmi-backend'
 
   # PostgreSQL exporter (optional - requires postgres-exporter container)
   # - job_name: 'postgres'

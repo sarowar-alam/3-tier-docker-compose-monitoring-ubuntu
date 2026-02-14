@@ -18,12 +18,12 @@ common:
 
 schema_config:
   configs:
-    - from: 2020-10-24
-      store: boltdb-shipper
+    - from: 2024-01-01
+      store: tsdb
       object_store: filesystem
-      schema: v11
+      schema: v13
       index:
-        prefix: index_
+        prefix: loki_index_
         period: 24h
 
 ruler:
@@ -34,6 +34,7 @@ limits_config:
   retention_period: 168h  # 7 days
   reject_old_samples: true
   reject_old_samples_max_age: 168h
+  allow_structured_metadata: false  # Required for schema v13 compatibility
 
 # Compactor for log retention
 compactor:
@@ -42,3 +43,4 @@ compactor:
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
+  delete_request_store: filesystem

@@ -55,7 +55,7 @@ git add .
 git commit -m "Initial commit: Three-tier Docker application with monitoring and CI/CD"
 
 # Add remote repository
-git remote add origin https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
+git remote add origin https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
 
 # Push to GitHub
 git push -u origin main
@@ -100,8 +100,8 @@ ssh -i "C:\path\to\your-key.pem" ubuntu@YOUR_EC2_PUBLIC_IP
 
 ```bash
 cd ~
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
-cd 3-tier-docker-compose-ubuntu
+git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
+cd 3-tier-docker-compose-monitoring-ubuntu
 ```
 
 ### Step 1.5: Configure Environment
@@ -179,7 +179,7 @@ curl http://localhost
 
 ```bash
 # On EC2
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 docker compose ps
 ```
 
@@ -317,7 +317,7 @@ http://YOUR_EC2_PUBLIC_IP:3001
 
 Go to your GitHub repository:
 ```
-https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu
+https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu
 ```
 
 **Navigate to:**
@@ -403,7 +403,7 @@ git push origin main
 
 ```bash
 # On EC2
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 
 # Check latest commit
 git log -1
@@ -744,7 +744,7 @@ sudo certbot --nginx -d yourdomain.com
 crontab -e
 
 # Daily backups at 2 AM
-0 2 * * * cd ~/3-tier-docker-compose-ubuntu && bash scripts/backup-database.sh
+0 2 * * * cd ~/3-tier-docker-compose-monitoring-ubuntu && bash scripts/backup-database.sh
 ```
 
 ### 5. Alerts:

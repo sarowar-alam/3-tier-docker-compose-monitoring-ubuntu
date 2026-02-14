@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-PROJECT_DIR="${HOME}/3-tier-docker-compose-ubuntu"
+PROJECT_DIR="${HOME}/3-tier-docker-compose-monitoring-ubuntu"
 BACKUP_DIR="${PROJECT_DIR}/backups"
 
 # Colors

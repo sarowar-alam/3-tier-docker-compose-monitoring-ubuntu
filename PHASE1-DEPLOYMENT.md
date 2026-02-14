@@ -143,8 +143,8 @@ docker ps
 
 ```bash
 cd ~
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
-cd 3-tier-docker-compose-ubuntu
+git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
+cd 3-tier-docker-compose-monitoring-ubuntu
 ```
 
 Verify files are present:
@@ -618,8 +618,8 @@ ssh -i "key.pem" ubuntu@YOUR_EC2_IP
 # ... (see Step 3 for full commands)
 
 # 3. Clone repo
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
-cd 3-tier-docker-compose-ubuntu
+git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
+cd 3-tier-docker-compose-monitoring-ubuntu
 
 # 4. Configure
 cp .env.example .env
@@ -643,7 +643,7 @@ curl http://localhost:3000/health
 
 **Common Issues:** See Troubleshooting section above
 
-**GitHub Issues:** https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu/issues
+**GitHub Issues:** https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues
 
 **Check logs for errors:**
 ```bash

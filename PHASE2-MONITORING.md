@@ -72,7 +72,7 @@ Connect to your EC2 and check application status:
 ```bash
 ssh -i "your-key.pem" ubuntu@YOUR_EC2_PUBLIC_IP
 
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 
 # Check application is running
 docker compose ps
@@ -98,7 +98,7 @@ docker compose logs -f
 Monitoring files are already in your repository:
 
 ```bash
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 git pull origin main
 ```
 

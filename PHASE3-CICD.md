@@ -41,7 +41,7 @@ Welcome to Phase 3! Your application is running with full monitoring. Now let's 
 ## Prerequisites
 
 ✅ **Phase 1 & 2 Completed** - App running with monitoring
-✅ **GitHub Repository** - `https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git`
+✅ **GitHub Repository** - `https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git`
 ✅ **Docker Hub Account** - Free account (we'll create)
 ✅ **EC2 SSH Access** - Your private key
 
@@ -116,7 +116,7 @@ GitHub Secrets store sensitive credentials securely.
 
 1. Go to your GitHub repository:
    ```
-   https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu
+   https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu
    ```
 2. Click **Settings** tab
 3. In left sidebar: **Secrets and variables** → **Actions**
@@ -298,7 +298,7 @@ SSH to your EC2 and verify:
 ```bash
 ssh -i "your-key.pem" ubuntu@YOUR_EC2_IP
 
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 
 # Check latest commit
 git log -1
@@ -460,7 +460,7 @@ git push origin main
 ```bash
 # SSH to EC2
 ssh -i "key.pem" ubuntu@YOUR_EC2_IP
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 
 # Go back to previous commit
 git log --oneline
@@ -850,7 +850,7 @@ Scale: Same process for 1 or 100 servers
 ### Manual Deploy (for testing):
 ```bash
 # On EC2
-cd ~/3-tier-docker-compose-ubuntu
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 git pull origin main
 docker compose pull
 docker compose up -d

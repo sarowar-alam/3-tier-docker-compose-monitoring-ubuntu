@@ -64,8 +64,8 @@ A production-ready BMI (Body Mass Index) and BMR (Basal Metabolic Rate) calculat
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
-cd 3-tier-docker-compose-ubuntu
+git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
+cd 3-tier-docker-compose-monitoring-ubuntu
 
 # 2. Configure environment
 cp .env.example .env
@@ -149,8 +149,8 @@ Automate deployment pipeline with GitHub Actions:
 ### Deploy Phase 1 (Application Only)
 ```bash
 # On EC2
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu.git
-cd 3-tier-docker-compose-ubuntu
+git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
+cd 3-tier-docker-compose-monitoring-ubuntu
 cp .env.example .env
 nano .env  # Configure passwords and URLs
 docker compose up -d
@@ -185,7 +185,7 @@ git push origin main
 
 ### Project Structure
 ```
-3-tier-docker-compose-ubuntu/
+3-tier-docker-compose-monitoring-ubuntu/
 ├── backend/
 │   ├── Dockerfile              # Backend container definition
 │   ├── .dockerignore          # Files to exclude from image
@@ -498,7 +498,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📞 Support
 
-- **Issues:** [GitHub Issues](https://github.com/sarowar-alam/3-tier-docker-compose-ubuntu/issues)
+- **Issues:** [GitHub Issues](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues)
 - **Documentation:** See `PHASE1-DEPLOYMENT.md` for detailed guide
 - **Logs:** `docker compose logs -f` for debugging
 

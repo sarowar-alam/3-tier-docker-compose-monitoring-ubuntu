@@ -49,7 +49,7 @@ jobs:
             echo "🚀 Starting deployment..."
             
             # Navigate to project directory
-            cd ~/3-tier-docker-compose-ubuntu
+            cd ~/3-tier-docker-compose-monitoring-ubuntu
             
             # Pull latest code
             echo "📥 Pulling latest code from GitHub..."

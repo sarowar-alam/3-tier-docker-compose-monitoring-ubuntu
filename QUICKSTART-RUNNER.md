@@ -183,3 +183,14 @@ Your full stack is now:
 - ✅ CI/CD automated (Phase 3)
 
 **From now on:** Just push code and watch it deploy automatically!
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

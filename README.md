@@ -2477,16 +2477,6 @@ Special thanks to all contributors who have helped improve this project!
 
 ---
 
-## Contact
-
-**Author:** Md. Sarowar Alam  
-**Role:** Lead DevOps Engineer, Hogarth Worldwide  
-**Email:** sarowar@hotmail.com  
-**LinkedIn:** [linkedin.com/in/sarowar](https://www.linkedin.com/in/sarowar/)  
-**GitHub:** [@sarowar-alam](https://github.com/sarowar-alam)
-
----
-
 ## Final Notes
 
 ### Project Philosophy
@@ -2527,3 +2517,14 @@ By completing all phases, you will have:
 **Questions?** Open an [issue](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues)!
 
 **Happy deploying! 🚀**
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

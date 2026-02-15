@@ -470,3 +470,14 @@ Your CI/CD is now:
 ---
 
 **Ready to update the workflows?** Let me know and I'll modify the GitHub Actions YAML files!
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

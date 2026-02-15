@@ -88,3 +88,14 @@ Your infrastructure is production-ready! Future enhancements:
 ---
 
 **Congratulations! You've built a complete enterprise-grade application stack!** 🚀
+
+---
+
+## 🧑‍💻 Author
+
+*Md. Sarowar Alam*  
+Lead DevOps Engineer, Hogarth Worldwide  
+📧 Email: sarowar@hotmail.com  
+🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
+
+---

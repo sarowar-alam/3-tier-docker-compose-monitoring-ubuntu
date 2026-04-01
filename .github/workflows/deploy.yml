@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     name: Build Images and Deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code

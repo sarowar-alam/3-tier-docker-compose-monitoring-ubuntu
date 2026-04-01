@@ -24,7 +24,7 @@ Welcome to Phase 3! Your application is running with full monitoring. Now let's 
 │              ↓                                   │
 │  8. Health check verification                    │
 │              ↓                                   │
-│  9. Deployment complete! ✅                      │
+│  9. Deployment complete! ✅                     │
 └──────────────────────────────────────────────────┘
 ```
 

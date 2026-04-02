@@ -1,4 +1,4 @@
-# Phase 3: CI/CD Automation with GitHub Actions
+﻿# Phase 3: CI/CD Automation with GitHub Actions
 
 Welcome to Phase 3! Your application is running with full monitoring. Now let's automate the deployment pipeline so every code push triggers automated builds and deployments.
 
@@ -24,7 +24,7 @@ Welcome to Phase 3! Your application is running with full monitoring. Now let's 
 │              ↓                                   │
 │  8. Health check verification                    │
 │              ↓                                   │
-│  9. Deployment complete! ✅                     │
+│  9. Deployment complete! ✅                      
 └──────────────────────────────────────────────────┘
 ```
 
@@ -64,7 +64,85 @@ Developer → Git Push → GitHub → Actions Build → Docker Hub
 
 ---
 
-## Step 1: Create Docker Hub Account & Repositories
+## Step 1: Add EC2 as a Self-Hosted GitHub Actions Runner
+
+Instead of GitHub's cloud runners, we run the workflow **directly on your EC2 instance**. This means no SSH hopping, no Docker Hub image pulls, and full access to your running containers.
+
+### Why Self-Hosted?
+
+| | GitHub Cloud Runner | Self-Hosted (EC2) |
+|---|---|---|
+| Directory access | ❌ `/home/runner` (temp) | ✅ `/home/ubuntu/...` (your repo) |
+| Docker access | ❌ Extra setup needed | ✅ Already installed |
+| Network | ❌ External SSH required | ✅ Direct |
+| Cost | Uses free minutes quota | ✅ Free (uses your EC2) |
+
+### 1.1 Register the Runner on GitHub
+
+1. Go to your GitHub repository
+2. Click **Settings** → **Actions** → **Runners**
+3. Click **New self-hosted runner**
+4. Select: **Linux** / **x64**
+5. Keep this page open — you'll copy commands from it
+
+### 1.2 Install the Runner on EC2
+
+SSH into your EC2 and run these commands (copy exact version URL from GitHub's page):
+
+```bash
+# Create a directory for the runner
+mkdir -p ~/actions-runner && cd ~/actions-runner
+
+# Download the runner (copy the exact URL from GitHub's page)
+curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.x.x/actions-runner-linux-x64-2.x.x.tar.gz
+
+# Extract
+tar xzf ./actions-runner-linux-x64.tar.gz
+
+# Configure — copy the full ./config.sh command from GitHub's page (includes your token)
+./config.sh --url https://github.com/YOUR_USERNAME/YOUR_REPO --token YOUR_TOKEN
+# Accept defaults for: runner group, runner name, work folder
+```
+
+### 1.3 Install as a System Service (Auto-start)
+
+```bash
+# Install as systemd service so it survives EC2 reboots
+cd ~/actions-runner
+sudo ./svc.sh install ubuntu
+sudo ./svc.sh start
+
+# Verify it's running
+sudo ./svc.sh status
+# Should show: active (running)
+```
+
+### 1.4 Verify Runner is Online
+
+Back on GitHub → **Settings** → **Actions** → **Runners**
+
+You should see your runner listed with status: **Idle** ✅
+
+> If it shows **Offline**, SSH to EC2 and run:
+> ```bash
+> sudo systemctl start actions.runner.*
+> sudo systemctl status actions.runner.*
+> ```
+
+### 1.5 Allow Runner to Use Docker Without sudo
+
+```bash
+# Add the runner user to the docker group
+sudo usermod -aG docker ubuntu
+# Re-login or run:
+newgrp docker
+# Test
+docker ps
+```
+
+---
+
+## Step 2: Create Docker Hub Account & Repositories
 
 ### 1.1 Sign Up for Docker Hub
 
@@ -108,7 +186,7 @@ Your repositories will be:
 
 ---
 
-## Step 2: Configure GitHub Secrets
+## Step 3: Configure GitHub Secrets
 
 GitHub Secrets store sensitive credentials securely.
 
@@ -148,22 +226,28 @@ Add these **5 secrets** one by one:
 
 #### Secret 5: EC2_SSH_KEY
 - Name: `EC2_SSH_KEY`
-- Value: Your private SSH key content
-- **How to get it:**
+- Value: The content of your **AWS `.pem` key file** � this is the exact same key you use when you SSH into your EC2 instance
 
-**On Windows (PowerShell):**
+> 💡 **Which key?** When you launched your EC2 instance on AWS, you downloaded a `.pem` file (e.g. `my-key.pem`). You use it like this:
+> ```bash
+> ssh -i "my-key.pem" ubuntu@YOUR_EC2_IP
+> ```
+> That `.pem` file is what goes here.
+
+**How to copy it on Windows (PowerShell):**
 ```powershell
-Get-Content "C:\path\to\your-key.pem" | clip
-# Now paste from clipboard
+# Replace the path with where your .pem file actually is
+Get-Content "C:\Users\YourName\Downloads\my-key.pem" | clip
+# The key is now in your clipboard � paste it into the GitHub secret
 ```
 
-**On Linux/Mac:**
+**How to copy it on Linux/Mac:**
 ```bash
-cat ~/.ssh/your-key.pem
-# Copy entire output including -----BEGIN and -----END lines
+cat ~/Downloads/my-key.pem
+# Select and copy ALL output
 ```
 
-- Paste entire key including:
+- The value must include the full header and footer lines:
   ```
   -----BEGIN RSA PRIVATE KEY-----
   MIIEpAIBAAKCAQEA...
@@ -171,6 +255,8 @@ cat ~/.ssh/your-key.pem
   -----END RSA PRIVATE KEY-----
   ```
 - Click **Add secret**
+
+> ⚠️ **Important:** Never share this key with anyone. GitHub encrypts it and only exposes it to your workflow at runtime.
 
 ### 2.3 Verify All Secrets
 
@@ -185,7 +271,7 @@ You should now have 5 secrets:
 
 ---
 
-## Step 3: Understanding the Workflows
+## Step 4: Understanding the Workflows
 
 Your repository already has two GitHub Actions workflows:
 
@@ -229,7 +315,7 @@ Your repository already has two GitHub Actions workflows:
 
 ---
 
-## Step 4: Test the CI/CD Pipeline
+## Step 5: Test the CI/CD Pipeline
 
 ### 4.1 Make a Small Change
 
@@ -323,7 +409,7 @@ Should work exactly as before!
 
 ---
 
-## Step 5: Full CI/CD Test (End-to-End)
+## Step 6: Full CI/CD Test (End-to-End)
 
 Now let's make a real code change and watch full automation:
 
@@ -405,7 +491,7 @@ curl http://YOUR_EC2_IP:3000/health
 
 ---
 
-## Step 6: Understanding Production Deployments
+## Step 7: Understanding Production Deployments
 
 ### Using docker-compose.prod.yml
 
@@ -438,7 +524,7 @@ This:
 
 ---
 
-## Step 7: Rollback Strategy
+## Step 8: Rollback Strategy
 
 ### If Deployment Fails
 
@@ -485,7 +571,7 @@ docker compose up -d
 
 ---
 
-## Step 8: Monitoring CI/CD
+## Step 9: Monitoring CI/CD
 
 ### GitHub Actions Logs
 
@@ -796,9 +882,9 @@ Scale: Same process for 1 or 100 servers
 │  2. git commit -m "new feature"            │
 │  3. git push origin main                   │
 │     ↓                                      │
-│  4. ☕ Get coffee                          │
+│  4. ☕ Get coffee                          
 │     ↓                                      │
-│  5. ✅ New feature live!                   │
+│  5. ✅ New feature live!                   
 └────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────┐
@@ -810,7 +896,7 @@ Scale: Same process for 1 or 100 servers
 │                       ↓                    │
 │                  Health Check              │
 │                       ↓                    │
-│                    Success! ✅             │
+│                    Success! ✅             
 └────────────────────────────────────────────┘
 ```
 
@@ -910,3 +996,5 @@ Lead DevOps Engineer, Hogarth Worldwide
 🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
 
 ---
+
+

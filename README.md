@@ -1,2522 +1,1430 @@
-# BMI Health Tracker - Production Three-Tier Application
+﻿# BMI Health Tracker — Production Three-Tier Application
 
-> **Enterprise-grade BMI/BMR calculator with comprehensive monitoring and automated CI/CD**
-
-A fully containerized, production-ready health tracking application featuring automated deployments, real-time monitoring, and observability. Built with Docker Compose, deployed on AWS EC2, monitored with Prometheus/Grafana/Loki, and automated with self-hosted GitHub Actions runners.
+> A fully containerised, production-ready health tracking application with automated deployments, real-time monitoring, and complete observability. Deployed on AWS EC2 with Docker Compose, monitored with Prometheus / Grafana / Loki, and automated with a self-hosted GitHub Actions runner.
 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![AWS](https://img.shields.io/badge/AWS-EC2-FF9900?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/ec2/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-316192?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Monitoring](https://img.shields.io/badge/Monitoring-Prometheus%20%7C%20Grafana-E6522C?logo=prometheus&logoColor=white)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Grafana-Loki%20%7C%20Prometheus-E6522C?logo=grafana&logoColor=white)](https://grafana.com/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
 - [Prerequisites](#prerequisites)
+- [Repository Structure](#repository-structure)
 - [Quick Start](#quick-start)
-- [Installation](#installation)
-  - [Phase 1: Application Deployment](#phase-1-application-deployment)
-  - [Phase 2: Monitoring Stack](#phase-2-monitoring-stack)
-  - [Phase 3: CI/CD Automation](#phase-3-cicd-automation)
-- [Project Structure](#project-structure)
-- [Configuration](#configuration)
-- [Development](#development)
-- [Operations](#operations)
-  - [Service Management](#service-management)
-  - [Database Operations](#database-operations)
-  - [Backup & Restore](#backup--restore)
-  - [Logs & Debugging](#logs--debugging)
-- [Monitoring & Observability](#monitoring--observability)
-- [Deployment](#deployment)
+- [Phase 1 — Application Deployment](#phase-1--application-deployment)
+- [Phase 2 — Monitoring Stack](#phase-2--monitoring-stack)
+- [Phase 3 — CI/CD with Self-Hosted Runner](#phase-3--cicd-with-self-hosted-runner)
+- [Configuration Reference](#configuration-reference)
+- [API Reference](#api-reference)
+- [Development Guide](#development-guide)
+- [Operations Runbook](#operations-runbook)
+- [Monitoring & Dashboards](#monitoring--dashboards)
+- [Deployment Workflows](#deployment-workflows)
 - [Troubleshooting](#troubleshooting)
 - [Security](#security)
 - [Performance](#performance)
+- [Roadmap](#roadmap)
 - [Contributing](#contributing)
-- [Support](#support)
-- [License](#license)
 
 ---
 
 ## Overview
 
-### What is This?
+### What This Repo Is
 
-The BMI Health Tracker is a **reference implementation** of modern DevOps practices, demonstrating:
+The BMI Health Tracker is a **reference implementation** of production DevOps patterns:
 
-- ✅ **Container Orchestration** with Docker Compose
-- ✅ **Infrastructure as Code** for reproducible deployments
-- ✅ **Observability** with metrics, logs, and dashboards
-- ✅ **CI/CD Automation** using self-hosted GitHub Actions runners
-- ✅ **Security Best Practices** for production environments
-- ✅ **High Availability** patterns with health checks and zero-downtime deployments
+- **Three-tier application** — React frontend, Node.js/Express backend, PostgreSQL database
+- **Full observability stack** — container metrics (cAdvisor), host metrics (node-exporter), log aggregation (Loki / Promtail), dashboards (Grafana)
+- **Self-hosted CI/CD** — a GitHub Actions runner installed as a systemd service on the EC2 instance; every push to `main` triggers a local build and rolling deploy with no external registries
 
-### Features
+### What the Application Does
 
-**Application Capabilities:**
-- BMI (Body Mass Index) calculation with health category classification
-- BMR (Basal Metabolic Rate) using Mifflin-St Jeor equation
-- Daily calorie estimation based on activity levels
-- Historical data tracking with PostgreSQL persistence
-- Trend visualization with Chart.js
-- Responsive mobile-friendly UI
+| Feature | Detail |
+|---------|--------|
+| BMI calculation | Weight / Height² with WHO category |
+| BMR calculation | Mifflin-St Jeor equation |
+| Daily calorie estimate | BMR × activity multiplier |
+| History tracking | Persisted to PostgreSQL |
+| Trend visualisation | Chart.js 30-day BMI trend |
 
-**Infrastructure Capabilities:**
-- Multi-container orchestration with Docker Compose
-- Automated database migrations
-- Health check monitoring for all services
-- Container metrics collection (CPU, Memory, Network)
-- Centralized log aggregation
-- Pre-configured Grafana dashboards
-- Automated build and deployment pipeline
-- Zero-downtime rolling updates
+### When to Use This Repo
 
-### Use Cases
-
-This repository is ideal for:
-- **Learning:** DevOps engineers studying container orchestration and monitoring
-- **Reference:** Teams implementing similar infrastructure patterns
-- **Prototyping:** Quick MVP deployment with production-grade setup
-- **Training:** Hands-on lab for Docker, monitoring, and CI/CD concepts
+| Scenario | Fit |
+|----------|-----|
+| Learning Docker Compose orchestration | ✅ |
+| Learning Prometheus / Grafana / Loki | ✅ |
+| Learning GitHub Actions self-hosted runners | ✅ |
+| Production multi-tenant SaaS | ❌ (use Kubernetes instead) |
 
 ---
 
 ## Architecture
 
-### System Overview
+### Container Map
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    AWS EC2 Ubuntu Instance (t2.medium)                  │
-│                                                                         │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │                  Docker Compose Environment                      │  │
-│  │                                                                  │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │         Phase 1: Application Stack (3 containers)       │   │  │
-│  │  │                                                         │   │  │
-│  │  │    ┌──────────────┐      ┌──────────────┐             │   │  │
-│  │  │    │  Frontend    │      │   Backend    │             │   │  │
-│  │  │    │    React     │◄────►│   Node.js    │             │   │  │
-│  │  │    │   + Nginx    │      │   Express    │             │   │  │
-│  │  │    │   Port 80    │      │  Port 3000   │             │   │  │
-│  │  │    └──────┬───────┘      └──────┬───────┘             │   │  │
-│  │  │           │                     │                     │   │  │
-│  │  │           └─────────┬───────────┘                     │   │  │
-│  │  │                     │                                 │   │  │
-│  │  │                ┌────▼──────┐                          │   │  │
-│  │  │                │ PostgreSQL│                          │   │  │
-│  │  │                │  Port 5432│                          │   │  │
-│  │  │                │  (volume) │                          │   │  │
-│  │  │                └───────────┘                          │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
-│  │                                                                  │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │       Phase 2: Monitoring Stack (6 containers)          │   │  │
-│  │  │                                                         │   │  │
-│  │  │  ┌───────────┐  ┌──────────┐  ┌────────────┐          │   │  │
-│  │  │  │Prometheus │◄─┤ cAdvisor │  │   Loki     │          │   │  │
-│  │  │  │  :9090    │  │  :8080   │  │   :3100    │          │   │  │
-│  │  │  └─────┬─────┘  └──────────┘  └──────▲─────┘          │   │  │
-│  │  │        │                              │                │   │  │
-│  │  │        │        ┌────────────┐        │                │   │  │
-│  │  │        └───────►│  Grafana   │        │                │   │  │
-│  │  │                 │   :3001    │        │                │   │  │
-│  │  │                 └────────────┘        │                │   │  │
-│  │  │                                       │                │   │  │
-│  │  │  ┌────────────┐                 ┌────┴──────┐         │   │  │
-│  │  │  │   Node     │                 │ Promtail  │         │   │  │
-│  │  │  │  Exporter  │                 │  (logs)   │         │   │  │
-│  │  │  │  :9100     │                 └───────────┘         │   │  │
-│  │  │  └────────────┘                                       │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
-│  │                                                                  │  │
-│  │  ┌─────────────────────────────────────────────────────────┐   │  │
-│  │  │        Phase 3: CI/CD (1 service)                      │   │  │
-│  │  │                                                         │   │  │
-│  │  │           ┌────────────────────────┐                   │   │  │
-│  │  │           │  GitHub Actions Runner │                   │   │  │
-│  │  │           │   (systemd service)    │                   │   │  │
-│  │  │           │                        │                   │   │  │
-│  │  │           │  • Pull code from Git  │                   │   │  │
-│  │  │           │  • Build Docker images│                   │   │  │
-│  │  │           │  • Deploy containers  │                   │   │  │
-│  │  │           │  • Run health checks  │                   │   │  │
-│  │  │           └────────────────────────┘                   │   │  │
-│  │  └─────────────────────────────────────────────────────────┘   │  │
-│  └──────────────────────────────────────────────────────────────────┘  │
-│                                                                         │
-│  Security Group: Ports 22, 80, 3001, 9090                             │
-└─────────────────────────────────────────────────────────────────────────┘
-
-                                    │
-                            ┌───────┴────────┐
-                            │                │
-                 ┌──────────▼──┐   ┌─────────▼──────┐
-                 │   GitHub    │   │   Developer    │
-                 │  Repository │   │   Workstation  │
-                 └─────────────┘   └────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│  AWS EC2  ubuntu@ip-*  (t2.medium — 4 GB RAM, 2 vCPU)                     │
+│                                                                           │
+│  ┌──────────────────────────────── Phase 1 ───────────────────────────┐   │
+│  │                                                                    │   │
+│  │  ┌──────────────────┐   /api/*   ┌──────────────────┐              │   │
+│  │  │  bmi-frontend    │ ─────────► │  bmi-backend     │              │   │
+│  │  │  React + Nginx   │            │  Node.js Express │              │   │
+│  │  │  :80 (public)    │            │  :3000 (internal)│              │   │
+│  │  └──────────────────┘            └────────┬─────────┘              │   │
+│  │                                           │ postgres://            │   │
+│  │                                  ┌────────▼─────────┐              │   │
+│  │                                  │  bmi-postgres    │              │   │
+│  │                                  │  PostgreSQL 14   │              │   │
+│  │                                  │  :5432 (internal)│              │   │
+│  │                                  └──────────────────┘              │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+│                                                                           │
+│  ┌──────────────────────────────── Phase 2 ───────────────────────────┐   │
+│  │                                                                    │   │
+│  │  ┌──────────────┐  scrape  ┌──────────────┐  scrape                │   │
+│  │  │  prometheus  │ ◄─────── │   cadvisor   │  (container metrics)   │   │
+│  │  │  :9090       │          └──────────────┘                        │   │
+│  │  │  (public)    │  scrape  ┌──────────────┐                        │   │
+│  │  │              │ ◄─────── │node-exporter │  (host metrics)        │   │
+│  │  └──────┬───────┘          └──────────────┘                        │   │
+│  │         │ datasource                                               │   │
+│  │  ┌──────▼───────┐          ┌──────────────┐  push logs             │   │
+│  │  │   grafana    │ ◄─────── │    loki      │ ◄──── promtail         │   │
+│  │  │  :3001       │ datasrc  │  :3100       │       (docker sock)    │   │
+│  │  │  (public)    │          │  (internal)  │                        │   │
+│  │  └──────────────┘          └──────────────┘                        │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+│                                                                           │
+│  ┌──────────────────────────────── Phase 3 ───────────────────────────┐   │
+│  │                                                                    │   │
+│  │  GitHub ──webhook──► actions-runner (systemd)                      │   │
+│  │                           │                                        │   │
+│  │                     git pull + docker compose build + deploy       │   │
+│  └────────────────────────────────────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Network Isolation
+
+| Network | Members | Purpose |
+|---------|---------|---------|
+| `bmi-backend-network` | postgres, backend | DB ↔ API only |
+| `bmi-frontend-network` | backend, frontend | API ↔ Nginx only |
+| `monitoring-network` | prometheus, grafana, loki, promtail, cadvisor, node-exporter | All monitoring tools |
+
+The database is never on the same network as the frontend. Port 5432 is never published to the host.
 
 ### Design Decisions
 
-#### Why Docker Compose (not Kubernetes)?
-
-- **Simplicity:** Single-host deployment perfect for small-medium workloads
-- **Cost:** No orchestration overhead, runs on one EC2 instance
-- **Visibility:** Clear service definitions in YAML
-- **Development:** Same environment locally and in production
-
-#### Why Self-Hosted Runner (not Docker Hub)?
-
-- **Speed:** Local builds ~2-3 min vs 7-10 min with Docker Hub
-- **Security:** No credentials in GitHub Secrets, direct local access
-- **Cost:** Free, no Docker Hub subscription needed
-- **Simplicity:** Single instance, all operations local
-
-#### Why Three Networks?
-
-- **Security:** Database isolated from frontend (defense in depth)
-- **Segmentation:** backend-network, frontend-network, monitoring-network
-- **Principle of Least Privilege:** Services only access what they need
+| Decision | Choice | Reason |
+|----------|--------|--------|
+| Orchestrator | Docker Compose | Single host, simpler than k8s for this scale |
+| CI runner | Self-hosted on EC2 | Builds run locally — no Docker Hub, no SSH secrets, 2–3 min deploys |
+| Log collection | Promtail → Loki | GitOps native; label-based querying; native Grafana integration |
+| Metrics | Prometheus + cAdvisor + node-exporter | Standard OSS stack; 400+ container and host metrics |
+| DB migrations | SQL init scripts in `database/init-scripts/` | Declarative, idempotent, run once on first container start |
 
 ---
 
 ## Technology Stack
 
-### Application Tier
+### Application
 
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Frontend** | React | 18.2.0 | UI framework |
-| | Vite | 5.0.0 | Build tool & dev server |
-| | Chart.js | 4.4.0 | Data visualization |
-| | Nginx | 1.25 (Alpine) | Web server & reverse proxy |
-| **Backend** | Node.js | 18 (Alpine) | JavaScript runtime |
-| | Express.js | 4.18.2 | Web framework |
-| | pg (node-postgres) | 8.11.3 | PostgreSQL client |
-| **Database** | PostgreSQL | 14 (Alpine) | Relational database |
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Frontend | React | 18 |
+| | Vite | 5 |
+| | Chart.js | 4 |
+| | Nginx | 1.25-alpine |
+| Backend | Node.js | 18-alpine |
+| | Express | 4.18 |
+| | node-postgres (pg) | 8.11 |
+| Database | PostgreSQL | 14-alpine |
 
-### Monitoring Tier
+### Monitoring
 
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Metrics** | Prometheus | v2.50.1 | Time-series database |
-| | cAdvisor | v0.47.0 | Container metrics |
-| | Node Exporter | v1.7.0 | Host metrics |
-| **Visualization** | Grafana | 10.3.3 | Dashboard platform |
-| **Logs** | Loki | 2.9.4 | Log aggregation |
-| | Promtail | 2.9.4 | Log collector |
-
-### CI/CD Tier
-
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Automation** | GitHub Actions | N/A | Workflow runner |
-| | Self-hosted Runner | 2.311.0 | Local build agent |
-| **Container Runtime** | Docker | 25.0.0+ | Container engine |
-| | Docker Compose | 2.24.0+ | Multi-container orchestration |
+| Tool | Version | Role |
+|------|---------|------|
+| Prometheus | latest | Metrics TSDB — scrapes cadvisor + node-exporter |
+| cAdvisor | latest | Per-container CPU / memory / network |
+| node-exporter | latest | Host CPU / memory / disk / network |
+| Grafana | latest | Dashboards (3 pre-provisioned) |
+| Loki | latest | Log storage |
+| Promtail | latest | Log shipper (docker_sd_configs) |
 
 ### Infrastructure
 
-| Component | Technology | Details |
-|-----------|-----------|---------|
-| **Cloud** | AWS EC2 | Ubuntu 22.04 LTS, t2.medium (4GB RAM, 2 vCPU) |
-| **Storage** | EBS | gp3 SSD, 30GB root volume |
-| **Network** | VPC | Public subnet, Elastic IP, Security Groups |
-| **DNS** | Public IP | Direct access via IPv4 |
+| Component | Detail |
+|-----------|--------|
+| Cloud | AWS EC2 — Ubuntu 22.04 LTS |
+| Instance | t2.medium (4 GB RAM, 2 vCPU) — minimum for all 9 containers + runner |
+| Storage | 30 GB EBS gp3 |
+| CI/CD | GitHub Actions — self-hosted runner (systemd service on EC2) |
 
 ---
 
 ## Prerequisites
 
-### Required Knowledge
-
-- Basic Linux command line navigation
-- Understanding of Docker concepts (images, containers, volumes, networks)
-- Git version control basics
-- SSH key-based authentication
-
 ### Required Accounts
 
-1. **AWS Account**
-   - Access to EC2 service
-   - Ability to create Security Groups
-   - Understanding of IAM basics
+- **AWS** — EC2 access and ability to configure Security Groups
+- **GitHub** — repository access with permission to configure Actions runners
 
-2. **GitHub Account**
-   - Repository access
-   - Ability to configure Actions
-   - Personal Access Token (for runner registration)
+### EC2 Security Group — Required Inbound Rules
 
-### Required Software (Local Machine)
+| Port | Source | Service |
+|------|--------|---------|
+| 22 | Your IP | SSH |
+| 80 | 0.0.0.0/0 | Frontend (HTTP) |
+| 3001 | Your IP | Grafana |
+| 9090 | Your IP | Prometheus |
 
-- **SSH Client** (PuTTY, OpenSSH, or built-in terminal)
-- **Git** (2.40+)
-- **Text Editor** (VS Code, Sublime, vim, etc.)
+> Port 3000 (backend), 5432 (postgres), 3100 (loki), 8080 (cadvisor), 9100 (node-exporter) are **not** published to the host. They are internal Docker network only.
 
-### AWS EC2 Requirements
+### Local Machine
 
-**Minimum Specifications:**
-- Instance Type: t2.small (2GB RAM, 1 vCPU)
-- Storage: 20GB EBS gp3
-- Operating System: Ubuntu 22.04 LTS
-- Network: Public IPv4 address
+- SSH client + your EC2 `.pem` key file
+- Git 2.40+
+- Any text editor
 
-**Recommended Specifications:**
-- Instance Type: **t2.medium (4GB RAM, 2 vCPU)** ✅
-- Storage: 30GB EBS gp3
-- Operating System: Ubuntu 22.04 LTS
-- Network: Elastic IP (static)
+### EC2 Instance Requirements
 
-**Security Group Configuration:**
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| RAM | 3 GB | **4 GB (t2.medium)** |
+| vCPU | 1 | 2 |
+| Disk | 20 GB | 30 GB |
+| OS | Ubuntu 20.04 | Ubuntu 22.04 LTS |
 
-| Port | Protocol | Source | Purpose |
-|------|----------|--------|---------|
-| 22 | TCP | Your IP | SSH access |
-| 80 | TCP | 0.0.0.0/0 | HTTP (Frontend) |
-| 3001 | TCP | Your IP | Grafana (optional) |
-| 9090 | TCP | Your IP | Prometheus (optional) |
+---
 
-**Why t2.medium?**
-- 4GB RAM needed for 9 containers + runner
-- 2 vCPUs allow parallel builds
-- Total memory usage: ~2.5-3GB under load
+## Repository Structure
+
+```
+.
+├── .github/
+│   └── workflows/
+│       └── deploy.yml              # Single CI/CD workflow (self-hosted runner)
+│
+├── backend/
+│   ├── Dockerfile
+│   ├── ecosystem.config.js         # PM2 config — logs to /proc/1/fd/1+2 for Docker capture
+│   ├── package.json
+│   └── src/
+│       ├── server.js               # Express entry point, /health endpoint
+│       ├── db.js                   # pg connection pool (max 20)
+│       ├── routes.js               # /api/measurements CRUD + /api/measurements/trends
+│       └── calculations.js         # BMI / BMR / calorie maths
+│
+├── frontend/
+│   ├── Dockerfile                  # Multi-stage: Vite build → Nginx serve
+│   ├── nginx.conf                  # Proxy /api/* → backend:3000
+│   ├── vite.config.js
+│   └── src/
+│       ├── App.jsx
+│       ├── api.js                  # Axios client — relative URLs via Nginx proxy
+│       └── components/
+│           ├── MeasurementForm.jsx
+│           └── TrendChart.jsx
+│
+├── database/
+│   ├── setup-database.sh
+│   └── (init scripts run via docker-entrypoint-initdb.d)
+│
+├── monitoring/
+│   ├── prometheus/
+│   │   └── prometheus.yml          # Scrape: prometheus, node-exporter, cadvisor
+│   ├── grafana/
+│   │   ├── dashboards/
+│   │   │   ├── docker-monitoring.json   # 23 panels: container + host metrics
+│   │   │   ├── docker-logs.json         # 8 panels: all-container log streams
+│   │   │   └── application-logs.json    # 3 panels: bmi-* containers only
+│   │   └── provisioning/
+│   │       ├── dashboards/dashboards.yml
+│   │       └── datasources/datasources.yml
+│   ├── loki/
+│   │   └── loki-config.yml
+│   └── promtail/
+│       └── promtail-config.yml     # docker_sd_configs, labels: container_name, service
+│
+├── scripts/
+│   ├── setup-docker.sh             # Install Docker + Compose on Ubuntu
+│   ├── setup-github-runner.sh      # Interactive runner registration
+│   ├── health-check.sh             # Verify all service endpoints
+│   └── get-public-ip.sh
+│
+├── docker-compose.yml              # Phase 1: postgres + backend + frontend
+├── docker-compose.monitoring.yml   # Phase 2: prometheus + grafana + loki + promtail + cadvisor + node-exporter
+├── docker-compose.prod.yml         # Optional production overrides
+├── .env.example                    # Template for required environment variables
+│
+├── PHASE1-DEPLOYMENT.md            # Step-by-step Phase 1 guide
+├── PHASE2-MONITORING.md            # Step-by-step Phase 2 guide
+├── PHASE3-CICD.md                  # Step-by-step Phase 3 guide (runner setup)
+├── SETUP-GITHUB-RUNNER.md          # Runner reference
+└── QUICKSTART-RUNNER.md            # Runner quick reference
+```
+
+### Key File Reference
+
+| File | Edit When |
+|------|-----------|
+| `docker-compose.yml` | Adding services, changing ports, environment |
+| `docker-compose.monitoring.yml` | Changing monitoring topology |
+| `.env` | Rotating passwords, changing the EC2 IP |
+| `.github/workflows/deploy.yml` | Changing CI/CD steps or triggers |
+| `backend/src/routes.js` | Adding / changing API endpoints |
+| `backend/src/calculations.js` | Changing BMI/BMR formulae |
+| `frontend/nginx.conf` | Changing proxy rules, adding caching headers |
+| `monitoring/prometheus/prometheus.yml` | Adding scrape targets |
+| `monitoring/grafana/dashboards/*.json` | Updating Grafana panels |
+| `monitoring/promtail/promtail-config.yml` | Changing log labels or pipeline stages |
 
 ---
 
 ## Quick Start
 
-### 🚀 Deploy in 15 Minutes
-
-If you want to get everything running quickly:
+**Estimated time: 15 minutes** (assuming Docker is installed)
 
 ```bash
-# 1. SSH to your EC2 instance
+# 1. SSH into EC2
 ssh -i your-key.pem ubuntu@YOUR_EC2_IP
 
-# 2. Clone repository
+# 2. Clone
 git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
 cd 3-tier-docker-compose-monitoring-ubuntu
 
-# 3. Run automated setup
-chmod +x scripts/*.sh
-./scripts/setup-all.sh
-
-# 4. Access your application
-# Frontend: http://YOUR_EC2_IP
-# Grafana:  http://YOUR_EC2_IP:3001 (admin/admin)
-# Prometheus: http://YOUR_EC2_IP:9090
-```
-
-That's it! All 9 containers will be running with monitoring configured.
-
-**What `setup-all.sh` does:**
-1. Installs Docker & Docker Compose
-2. Configures environment variables
-3. Deploys Phase 1 (application)
-4. Deploys Phase 2 (monitoring)
-5. Runs health checks
-6. Displays access information
-
-### 🎯 Phased Approach (Recommended for Learning)
-
-For a deeper understanding, deploy in phases:
-
-| Phase | Time | Components | Guide |
-|-------|------|------------|-------|
-| **1** | 1-2 hours | Application (3 containers) | [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md) |
-| **2** | 30-45 min | Monitoring (6 containers) | [PHASE2-MONITORING.md](PHASE2-MONITORING.md) |
-| **3** | 1 hour | CI/CD (runner + workflows) | [SETUP-GITHUB-RUNNER.md](SETUP-GITHUB-RUNNER.md) |
-
----
-
-## Installation
-
-### Phase 1: Application Deployment
-
-**Goal:** Deploy the 3-tier application (frontend, backend, database)
-
-**Time:** 1-2 hours (first time), 15 minutes (subsequent)
-
-**Detailed Guide:** [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md)
-
-#### Quick Steps
-
-```bash
-# On EC2 instance
-git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
-cd 3-tier-docker-compose-monitoring-ubuntu
-
-# Configure environment
+# 3. Configure environment
 cp .env.example .env
-nano .env  # Set POSTGRES_PASSWORD and FRONTEND_URL
+nano .env
+# Set POSTGRES_PASSWORD and FRONTEND_URL (your EC2 public IP)
 
-# Deploy
-docker compose up -d
+# 4. Run everything (Phase 1 + 2)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
 
-# Verify
-docker compose ps
-curl http://localhost:3000/health
-```
-
-#### What You Get
-
-- ✅ React frontend on port 80
-- ✅ Node.js backend API on port 3000 (internal)
-- ✅ PostgreSQL database with automated migrations
-- ✅ Health checks for all services
-- ✅ Data persistence with Docker volumes
-
-#### Endpoints After Phase 1
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Frontend | http://YOUR_EC2_IP | None |
-| Backend API | http://localhost:3000 | None (internal only) |
-| Database | localhost:5432 | See .env file |
-
-**Validation:**
-
-```bash
-# All services should show "Up"
-docker compose ps
-
-# Backend health should return JSON
-curl http://localhost:3000/health
-
-# Frontend should serve HTML
-curl http://localhost | head -n 5
-```
-
----
-
-### Phase 2: Monitoring Stack
-
-**Goal:** Add observability with Prometheus, Grafana, and Loki
-
-**Time:** 30-45 minutes
-
-**Detailed Guide:** [PHASE2-MONITORING.md](PHASE2-MONITORING.md)
-
-#### Quick Steps
-
-```bash
-# On EC2 (after Phase 1 is running)
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-
-# Verify
+# 5. Wait ~30 seconds for health checks to pass
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 ```
 
-#### What You Get
-
-- ✅ **Prometheus** - Metrics collection and alerting
-- ✅ **Grafana** - Pre-configured dashboards (3)
-- ✅ **Loki** - Log aggregation system
-- ✅ **Promtail** - Log shipping from all containers
-- ✅ **cAdvisor** - Container resource metrics
-- ✅ **Node Exporter** - Host system metrics
-
-#### Dashboards Included
-
-1. **Docker Container Monitoring**
-   - CPU usage per container
-   - Memory usage trends
-   - Network I/O (RX/TX)
-   - Container restart count
-
-2. **Docker Logs Dashboard**
-   - All container logs (real-time)
-   - Error log filtering
-   - Service-specific views (frontend, backend, database)
-   - Log rate graphs
-
-3. **Application Logs**
-   - Application-specific logging
-   - Error tracking
-   - Performance metrics
-
-#### Endpoints After Phase 2
+**Access points after startup:**
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
-| Grafana | http://YOUR_EC2_IP:3001 | admin / admin |
-| Prometheus | http://YOUR_EC2_IP:9090 | None |
-| Loki | http://localhost:3100 | None (internal) |
-
-**Validation:**
-
-```bash
-# 9 containers should be running (3 app + 6 monitoring)
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
-
-# Prometheus targets should be UP
-curl http://localhost:9090/api/v1/targets | jq '.data.activeTargets[].health'
-
-# Grafana should be accessible
-curl -I http://localhost:3001
-```
+| Application | `http://YOUR_EC2_IP` | — |
+| Grafana | `http://YOUR_EC2_IP:3001` | admin / admin |
+| Prometheus | `http://YOUR_EC2_IP:9090` | — |
 
 ---
 
-### Phase 3: CI/CD Automation
+## Phase 1 — Application Deployment
 
-**Goal:** Automate deployments with self-hosted GitHub Actions runner
+**Detailed guide:** [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md)
 
-**Time:** 1 hour setup, then automatic forever
-
-**Detailed Guide:** [SETUP-GITHUB-RUNNER.md](SETUP-GITHUB-RUNNER.md)
-
-#### Architecture: Self-Hosted Runner
-
-```
-┌──────────────┐         ┌─────────────────┐         ┌──────────────┐
-│   GitHub     │ Webhook │ Self-Hosted     │ Docker  │   Docker     │
-│  Repository  ├────────►│ Actions Runner  ├────────►│  Containers  │
-│              │         │  (EC2 Service)  │         │              │
-└──────────────┘         └─────────────────┘         └──────────────┘
-       │                          │                           │
-       │ Push Code                │ Pull Code                 │
-       │                          │ Build Images              │
-       └──────────────────────────┴───────────────────────────┘
-                    Fast (~2-3 min total)
-```
-
-**Why Self-Hosted?**
-- **2-3 min deployments** (vs 7-10 min with Docker Hub)
-- **No external registry** needed (no Docker Hub account)
-- **More secure** (no SSH keys in GitHub Secrets)
-- **Free** (uses your existing EC2 resources)
-
-#### Quick Steps
+### Step 1 — Install Docker
 
 ```bash
-# 1. On EC2, download and extract runner
-cd ~
-mkdir actions-runner && cd actions-runner
-curl -o actions-runner-linux-x64-2.311.0.tar.gz -L \
-  https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-linux-x64-2.311.0.tar.gz
-tar xzf actions-runner-linux-x64-2.311.0.tar.gz
+chmod +x scripts/setup-docker.sh
+./scripts/setup-docker.sh
 
-# 2. Get token from GitHub
-# https://github.com/YOUR_USERNAME/YOUR_REPO/settings/actions/runners/new
-
-# 3. Configure runner
-./config.sh --url https://github.com/YOUR_USERNAME/YOUR_REPO --token YOUR_TOKEN
-
-# 4. Install as service
-sudo ./svc.sh install
-sudo ./svc.sh start
-sudo ./svc.sh status
-
-# 5. Verify in GitHub
-# Settings → Actions → Runners → Should see your runner (green dot)
+# Verify
+docker --version          # 25.0+
+docker compose version    # 2.24+
 ```
 
-#### What You Get
-
-- ✅ **Automated Builds** - Every push to `main` triggers build
-- ✅ **Automated Deployments** - New containers deployed automatically
-- ✅ **Health Checks** - Deployment fails if health checks don't pass
-- ✅ **Git-Based Rollback** - Revert by reverting commit
-- ✅ **Status Reporting** - See build/deploy status in GitHub Actions tab
-
-#### Workflow File
-
-Location: `.github/workflows/deploy.yml`
-
-**Triggered by:**
-- Push to `main` branch
-- Manual dispatch (click "Run workflow" in GitHub)
-
-**Steps:**
-1. Checkout code
-2. Pull latest from Git (on EC2)
-3. Build backend & frontend images
-4. Deploy Phase 1 containers
-5. Ensure Phase 2 monitoring is running
-6. Run health checks (backend, frontend, Grafana, Prometheus)
-7. Show container status
-8. Clean up old images
-9. Display deployment summary
-
-**Example Output:**
-
-```
-✅ Deployment completed successfully!
-==========================================
-Phase 1 - Application:
-  Frontend: http://65.0.133.186
-  Backend API: http://65.0.133.186:3000 (internal)
-
-Phase 2 - Monitoring:
-  Grafana: http://65.0.133.186:3001
-  Prometheus: http://65.0.133.186:9090
-
-Total Containers: 9 (3 app + 6 monitoring)
-==========================================
-```
-
-#### Daily Workflow
-
-```bash
-# 1. Make code changes locally
-code backend/src/server.js
-
-# 2. Commit and push
-git add .
-git commit -m "feat: Add new endpoint"
-git push origin main
-
-# 3. Watch deployment in GitHub
-# https://github.com/YOUR_USERNAME/YOUR_REPO/actions
-
-# 4. Verify on your EC2
-# http://YOUR_EC2_IP (automatically updated!)
-```
-
-**Benefits:**
-- No manual SSH needed
-- No manual docker commands
-- Consistent deployments every time
-- Full audit trail in Git
-
----
-
-## Project Structure
-
-```
-3-tier-docker-compose-monitoring-ubuntu/
-│
-├── .github/
-│   └── workflows/
-│       └── deploy.yml                    # CI/CD workflow definition
-│
-├── backend/
-│   ├── Dockerfile                        # Backend container definition
-│   ├── .dockerignore                     # Exclude from image
-│   ├── package.json                      # Node.js dependencies
-│   ├── package-lock.json
-│   ├── ecosystem.config.js               # PM2 configuration (optional)
-│   ├── src/
-│   │   ├── server.js                     # Express app entry point
-│   │   ├── db.js                         # PostgreSQL connection pool
-│   │   ├── routes.js                     # API route handlers
-│   │   └── calculations.js               # BMI/BMR math functions
-│   └── migrations/                       # Legacy SQL migrations (not used)
-│       ├── 001_create_measurements.sql
-│       └── 002_add_measurement_date.sql
-│
-├── frontend/
-│   ├── Dockerfile                        # Frontend multi-stage build
-│   ├── .dockerignore                     # Exclude node_modules
-│   ├── nginx.conf                        # Nginx web server config
-│   ├── package.json                      # React dependencies
-│   ├── package-lock.json
-│   ├── vite.config.js                    # Vite build configuration
-│   ├── index.html                        # HTML entry point
-│   ├── public/                           # Static assets
-│   └── src/
-│       ├── main.jsx                      # React app bootstrap
-│       ├── App.jsx                       # Main component
-│       ├── index.css                     # Global styles
-│       ├── api.js                        # Axios HTTP client
-│       └── components/
-│           ├── MeasurementForm.jsx       # Input form component
-│           └── TrendChart.jsx            # Chart.js visualization
-│
-├── database/
-│   └── init-scripts/                     # Auto-run on first startup
-│       ├── 01-init.sql                   # Create database & user
-│       ├── 02-create-measurements.sql    # Create tables
-│       └── 03-add-measurement-date.sql   # Add columns
-│
-├── monitoring/
-│   ├── prometheus/
-│   │   └── prometheus.yml                # Scrape configs, retention
-│   ├── grafana/
-│   │   ├── dashboards/
-│   │   │   ├── docker-monitoring.json    # Container metrics dashboard
-│   │   │   ├── docker-logs.json          # Logs dashboard
-│   │   │   └── application-logs.json     # App-specific logs
-│   │   └── provisioning/
-│   │       ├── dashboards/
-│   │       │   └── dashboards.yml        # Auto-load dashboards
-│   │       └── datasources/
-│   │           └── datasources.yml       # Prometheus + Loki config
-│   ├── loki/
-│   │   └── loki-config.yml               # Log storage config (v13 schema)
-│   └── promtail/
-│       └── promtail-config.yml           # Log collection rules
-│
-├── scripts/
-│   ├── setup-all.sh                      # One-command full deployment
-│   ├── setup-docker.sh                   # Install Docker + Compose
-│   ├── setup-github-runner.sh            # Install Actions runner
-│   ├── start-with-monitoring.sh          # Start app + monitoring
-│   ├── health-check.sh                   # Verify all services
-│   └── get-public-ip.sh                  # Retrieve EC2 public IP
-│
-├── docker-compose.yml                    # Phase 1: Application stack
-├── docker-compose.monitoring.yml         # Phase 2: Monitoring stack
-├── docker-compose.prod.yml               # Production overrides (optional)
-│
-├── .env.example                          # Environment variable template
-├── .gitignore                            # Git ignore patterns
-├── .gitattributes                        # Git line ending config
-│
-├── README.md                             # This file (production guide)
-├── PHASE1-DEPLOYMENT.md                  # Detailed Phase 1 guide
-├── PHASE2-MONITORING.md                  # Detailed Phase 2 guide
-├── SETUP-GITHUB-RUNNER.md                # Self-hosted runner setup
-├── QUICKSTART-RUNNER.md                  # Quick runner setup
-├── DEPLOYMENT-GUIDE.md                   # Comprehensive deployment guide
-│
-└── LICENSE                               # MIT License
-```
-
-### Key Files Explained
-
-| File | Purpose | When to Edit |
-|------|---------|--------------|
-| `docker-compose.yml` | Main application stack | Add/remove services, change ports |
-| `docker-compose.monitoring.yml` | Monitoring stack | Configure monitoring tools |
-| `.env` | Runtime configuration | Passwords, URLs, environment settings |
-| `.github/workflows/deploy.yml` | CI/CD pipeline | Customize deployment steps |
-| `backend/src/server.js` | API entry point | Add new endpoints, middleware |
-| `frontend/src/App.jsx` | UI main component | Change UI layout, add features |
-| `monitoring/grafana/dashboards/*.json` | Dashboard definitions | Customize metrics/graphs |
-| `monitoring/prometheus/prometheus.yml` | Metrics scraping | Add new scrape targets |
-
----
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` from template:
+### Step 2 — Configure Environment
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-**Required Variables:**
+`.env` must contain:
 
 ```env
-# Database Configuration
-POSTGRES_USER=bmi_user                    # PostgreSQL username
-POSTGRES_PASSWORD=CHANGEME_SecurePass123  # Strong password (16+ chars)
-POSTGRES_DB=bmidb                         # Database name
-
-# Application Configuration
-NODE_ENV=production                       # 'development' or 'production'
-FRONTEND_URL=http://YOUR_EC2_PUBLIC_IP    # Your EC2 public IP
-
-# Optional: Database Connection (auto-configured)
-DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+POSTGRES_USER=bmi_user
+POSTGRES_PASSWORD=YourSecurePassword123!    # Change this
+POSTGRES_DB=bmidb
+NODE_ENV=production
+FRONTEND_URL=http://YOUR_EC2_PUBLIC_IP      # Replace with actual IP
 ```
 
-**Security Notes:**
-- ⚠️ Never commit `.env` to Git (already in `.gitignore`)
-- ✅ Use 16+ character passwords with letters, numbers, symbols
-- ✅ Change default password immediately
-- ✅ Different passwords for dev/prod environments
+> `.env` is in `.gitignore`. Never commit it. The `POSTGRES_PASSWORD` is **required** — startup fails without it.
 
-### Docker Compose Configuration
+### Step 3 — Deploy
 
-#### Main Application (docker-compose.yml)
+```bash
+docker compose up -d --build
 
-**Networks:**
-```yaml
-networks:
-  backend-network:    # postgres <-> backend
-  frontend-network:   # backend <-> frontend
+# Watch startup
+docker compose logs -f
 ```
 
-**Volumes:**
-```yaml
-volumes:
-  postgres-data:      # Persistent database storage
+**Expected startup order:** postgres (healthy) → backend (healthy) → frontend (healthy)
+
+### Step 4 — Validate
+
+```bash
+# All three containers should show (healthy)
+docker compose ps
+
+# Backend is up
+curl http://localhost/health          # {"status":"ok","environment":"production"}
+
+# API responds
+curl http://localhost/api/measurements   # {"rows":[...]}
+
+# Frontend serves HTML
+curl -s http://localhost | head -5
 ```
 
-**Services:**
+> **Note on /health:** The health endpoint is served through Nginx on port 80 (not port 3000 directly). Port 3000 is internal to the Docker network.
 
-1. **postgres** (Database)
-   - Image: `postgres:14-alpine`
-   - Health check: `pg_isready` every 10s
-   - Init scripts: Runs SQL in `database/init-scripts/` on first start
-   - Restart policy: `always` (survives EC2 reboots)
+### Database Initialisation
 
-2. **backend** (API)
-   - Build: `./backend/Dockerfile`
-   - Depends on: postgres (waits for healthy)
-   - Health check: `curl /health` every 30s
-   - Environment: Loads from `.env`
+On first start, PostgreSQL auto-runs all `*.sql` files in `database/init-scripts/` via `docker-entrypoint-initdb.d`. This creates the `measurements` table and all required columns. This only runs once — if the volume already exists, init scripts are skipped.
 
-3. **frontend** (Web)
-   - Build: `./frontend/Dockerfile` (multi-stage)
-   - Depends on: backend (waits for healthy)
-   - Port mapping: `80:80` (host:container)
-   - Nginx config: Proxies `/api/*` to backend
+To force re-initialise:
 
-#### Monitoring Stack (docker-compose.monitoring.yml)
-
-**Networks:**
-```yaml
-networks:
-  monitoring-network:   # Shared by all monitoring tools
-  backend-network:      # Prometheus scrapes backend
-```
-
-**Volumes:**
-```yaml
-volumes:
-  prometheus-data:      # Metrics storage (15 days retention)
-  grafana-data:         # Dashboard configs and data
-  loki-data:            # Log storage (7 days retention)
-```
-
-**Services:**
-
-1. **prometheus** - Metrics database
-   - Scrapes: backend, cadvisor, node-exporter
-   - Retention: 15 days
-   - Storage: 10GB max
-
-2. **grafana** - Visualization
-   - Auto-provisions: Datasources + dashboards
-   - Default login: admin/admin (change on first login)
-
-3. **loki** - Log aggregation
-   - Schema: v13 with tsdb index
-   - Retention: 7 days
-
-4. **promtail** - Log collector
-   - Sources: All Docker containers via docker_sd_configs
-   - Labels: container_name, service, stream
-
-5. **cadvisor** - Container metrics
-   - Exposes: CPU, memory, network per container
-
-6. **node-exporter** - Host metrics
-   - Exposes: CPU, memory, disk, network for EC2
-
-### Nginx Configuration
-
-Location: `frontend/nginx.conf`
-
-**Key Settings:**
-
-```nginx
-# Reverse proxy for API calls
-location /api/ {
-    proxy_pass http://backend:3000/api/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-}
-
-# Static file serving
-location / {
-    root /usr/share/nginx/html;
-    try_files $uri $uri/ /index.html;
-}
-
-# Gzip compression
-gzip on;
-gzip_types text/css application/javascript application/json;
+```bash
+docker compose down -v    # DELETES all data
+docker compose up -d
 ```
 
 ---
 
-## Development
+## Phase 2 — Monitoring Stack
 
-### Local Development Setup
+**Detailed guide:** [PHASE2-MONITORING.md](PHASE2-MONITORING.md)
 
-**Prerequisites:**
-- Docker Desktop (Mac/Windows) or Docker Engine (Linux)
-- Node.js 18+ (for local testing without Docker)
-- Git
-
-**Quick Start:**
+### Deploy Monitoring
 
 ```bash
-# 1. Clone repository
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+# 9 containers should be running
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
+```
+
+### Validate
+
+```bash
+# Prometheus is healthy
+curl http://localhost:9090/-/healthy
+
+# Prometheus scrape targets — all should show state: "up"
+curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "import sys,json; [print(t['labels']['job'], t['health']) for t in json.load(sys.stdin)['data']['activeTargets']]"
+
+# Grafana responds
+curl -s http://localhost:3001/api/health | python3 -m json.tool
+```
+
+### Pre-Provisioned Dashboards
+
+Three dashboards are automatically provisioned via `monitoring/grafana/provisioning/` on Grafana startup. No manual import required.
+
+#### docker-monitoring.json — 23 panels, 6 rows
+
+| Row | Panels |
+|-----|--------|
+| Overview | Running containers (stat), Host CPU % (stat), Host Memory % (stat), Max Disk % (stat) |
+| Container CPU & Memory | CPU % timeseries (per container), Memory working set timeseries |
+| Container Network I/O | Network RX bytes/s, Network TX bytes/s |
+| Host CPU | Stacked CPU by mode (user/system/iowait/steal), CPU gauge |
+| Host Memory & Load | Memory breakdown (used/buffers/cached/free), Load average 1m/5m/15m |
+| Disk & Network I/O | Disk read/write bytes/s, Host network RX/TX (excluding lo/docker/veth) |
+| Disk Space | Bar gauge % by mountpoint, Used vs Free timeseries |
+
+**Prometheus data sources:**
+
+```promql
+# Container CPU %
+sum(rate(container_cpu_usage_seconds_total{name=~"bmi-backend|bmi-frontend|..."}[5m])) by (name) * 100
+
+# Container memory (working set)
+container_memory_working_set_bytes{name=~"..."}
+
+# Host CPU %
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# Host memory used
+node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+```
+
+#### docker-logs.json — 8 panels
+
+All 9 containers are queried with explicit label selectors (no wildcards — Loki requires indexed labels):
+
+```logql
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres|/cadvisor|/grafana|/loki|/node-exporter|/prometheus|/promtail"}
+```
+
+Panels include: all-container log stream, log rate graph, error-only filter, and per-service streams.
+
+#### application-logs.json — 3 panels
+
+Scoped to the three application containers:
+
+```logql
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres"}
+```
+
+### How Logs Flow
+
+```
+Docker container stdout/stderr
+        ↓
+/var/lib/docker/containers/<id>/*-json.log
+        ↓
+Promtail (docker_sd_configs on /var/run/docker.sock)
+  → labels: container_name, service, stream
+        ↓
+Loki (http://loki:3100/loki/api/v1/push)
+        ↓
+Grafana (Loki datasource uid: loki)
+```
+
+> **Important:** For logs to appear, the process inside the container must write to **stdout/stderr**, not to files. See the PM2 configuration note below.
+
+### PM2 and Docker Logging
+
+The backend uses PM2 (`ecosystem.config.js`). PM2 by default writes to `./logs/*.log` files inside the container, which Docker cannot capture. The file is configured to redirect to Docker stdout/stderr:
+
+```javascript
+// ecosystem.config.js
+error_file: '/proc/1/fd/2',     // → Docker stderr
+out_file:   '/proc/1/fd/1',     // → Docker stdout
+log_file:   '/dev/null',
+```
+
+If you see no backend logs in Grafana, verify this setting is in place, then rebuild:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build backend
+docker logs bmi-backend    # Should show startup messages
+```
+
+### PostgreSQL Log Visibility
+
+PostgreSQL is configured with verbose logging so database activity appears in the Grafana logs panel. The `command:` block in `docker-compose.yml` passes these flags:
+
+```
+log_connections=on           → logs every new connection
+log_disconnections=on        → logs every disconnect
+log_statement=mod            → logs INSERT / UPDATE / DELETE / DDL
+log_min_duration_statement=500  → logs any query > 500 ms
+log_min_messages=warning     → logs warnings and above
+```
+
+### Loki Health Status
+
+Loki may show `(unhealthy)` in `docker ps -a`. This is a known false positive caused by the default healthcheck timing. Loki is functional — verify with:
+
+```bash
+curl http://localhost:3100/ready    # Should return "ready"
+curl http://localhost:3100/metrics  # Should return Prometheus metrics
+```
+
+---
+
+## Phase 3 — CI/CD with Self-Hosted Runner
+
+**Detailed guide:** [PHASE3-CICD.md](PHASE3-CICD.md)
+
+### Why Self-Hosted
+
+| | GitHub Cloud Runner | Self-Hosted (EC2) |
+|---|---|---|
+| Repo access | Needs SSH secrets | Direct — it's the same machine |
+| Docker builds | Requires Docker Hub push/pull | Local build only |
+| Deploy time | ~7–10 min | **~2–3 min** |
+| Cost | Uses free minutes quota | Free (your EC2) |
+| External dependencies | Docker Hub account | None |
+
+### Install the Runner
+
+**Step 1** — Register on GitHub
+
+1. Go to your repository → **Settings** → **Actions** → **Runners**
+2. Click **New self-hosted runner**
+3. Select: **Linux** / **x64**
+4. Keep the page open — you will copy commands from it
+
+**Step 2** — Install on EC2
+
+```bash
+# On EC2
+mkdir -p ~/actions-runner && cd ~/actions-runner
+
+# Download (copy the exact URL and hash from GitHub's page — version changes)
+curl -o actions-runner-linux-x64.tar.gz -L \
+  https://github.com/actions/runner/releases/download/v2.x.x/actions-runner-linux-x64-2.x.x.tar.gz
+
+tar xzf ./actions-runner-linux-x64.tar.gz
+
+# Configure — copy the full ./config.sh line from GitHub's page (includes your one-time token)
+./config.sh --url https://github.com/YOUR_USERNAME/YOUR_REPO --token YOUR_TOKEN
+# Accept all defaults: Enter through runner group, runner name, and _work folder
+```
+
+**Step 3** — Install as a systemd service (auto-starts on reboot)
+
+```bash
+cd ~/actions-runner
+sudo ./svc.sh install ubuntu
+sudo ./svc.sh start
+sudo ./svc.sh status     # Should show: active (running)
+```
+
+**Step 4** — Add ubuntu to docker group
+
+```bash
+sudo usermod -aG docker ubuntu
+newgrp docker
+docker ps    # Should work without sudo
+```
+
+**Step 5** — Verify online
+
+GitHub → **Settings** → **Actions** → **Runners** → your runner should show **Idle** ✅
+
+> If it shows **Offline** after configuration:
+> ```bash
+> sudo systemctl restart actions.runner.*
+> sudo systemctl status  actions.runner.*
+> ```
+
+### The Workflow File
+
+**Location:** `.github/workflows/deploy.yml`
+
+**Triggers:**
+- Push to `main` branch → automatic
+- Manual dispatch → GitHub Actions → Run workflow
+
+**Runner:** `runs-on: self-hosted`  — runs **on your EC2**, not GitHub's cloud
+
+**Steps executed on EC2:**
+
+1. `actions/checkout@v4` — checks out code into `~/actions-runner/_work/`
+2. Pull latest code into `/home/ubuntu/3-tier-docker-compose-monitoring-ubuntu`
+3. `docker compose build --no-cache` — builds backend and frontend images locally
+4. `docker compose up -d --force-recreate --no-deps backend frontend` — rolling restart of app containers
+5. Ensure monitoring stack is running
+6. Health checks — backend (`curl /health`), frontend (`curl localhost`), Grafana, Prometheus
+7. `docker compose ps` — final container status
+8. `docker image prune -af --filter "until=24h"` — clean old images
+9. Deployment summary with public IP and service URLs
+
+**Deploy a change:**
+
+```bash
+# On your local machine
+git add .
+git commit -m "feat: your change"
+git push origin main
+
+# Watch progress
+# https://github.com/YOUR_USERNAME/YOUR_REPO/actions
+```
+
+---
+
+## Configuration Reference
+
+### .env Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `POSTGRES_USER` | Yes | `bmi_user` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | **Yes** | — | PostgreSQL password (no default) |
+| `POSTGRES_DB` | Yes | `bmidb` | Database name |
+| `NODE_ENV` | Yes | `production` | Node environment |
+| `FRONTEND_URL` | Yes | `http://localhost` | EC2 public IP — used in CORS |
+
+### Prometheus Scrape Targets
+
+Defined in `monitoring/prometheus/prometheus.yml`:
+
+| Job | Target | Metrics |
+|-----|--------|---------|
+| `prometheus` | `localhost:9090` | Prometheus self-metrics |
+| `node-exporter` | `node-exporter:9100` | Host CPU / memory / disk / network |
+| `cadvisor` | `cadvisor:8080` | Per-container CPU / memory / network |
+
+> The backend does **not** have a Prometheus `/metrics` endpoint. App-layer metrics are available only through cAdvisor container-level data.
+
+To add a new scrape target, edit `monitoring/prometheus/prometheus.yml` and restart Prometheus:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart prometheus
+```
+
+### Grafana Provisioning
+
+Grafana auto-loads on startup via bind mounts:
+
+| Path in container | Local path | Controls |
+|-------------------|-----------|---------|
+| `/etc/grafana/provisioning` | `monitoring/grafana/provisioning/` | Datasource + dashboard config |
+| `/var/lib/grafana/dashboards` | `monitoring/grafana/dashboards/` | Dashboard JSON files |
+
+`updateIntervalSeconds: 10` in `dashboards.yml` means any change to a `*.json` dashboard file is picked up within 10 seconds — **no Grafana restart needed**.
+
+### Loki Labels
+
+Promtail tags every log line with:
+
+| Label | Example value | Source |
+|-------|--------------|--------|
+| `container_name` | `/bmi-backend` | `__meta_docker_container_name` |
+| `service` | `backend` | `com.docker.compose.service` label |
+| `stream` | `stdout` | Docker JSON log field |
+
+Use `container_name` in LogQL queries. The leading `/` is part of the value:
+
+```logql
+{container_name="/bmi-backend"}
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres"}
+```
+
+---
+
+## API Reference
+
+Base URL: `http://YOUR_EC2_IP/api` (proxied through Nginx on port 80)
+
+### POST /api/measurements
+
+Create a new measurement.
+
+**Request body:**
+
+```json
+{
+  "weightKg": 70,
+  "heightCm": 175,
+  "age": 30,
+  "sex": "male",
+  "activity": "moderate",
+  "measurementDate": "2026-04-02"
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `weightKg` | number | ✅ | Positive |
+| `heightCm` | number | ✅ | Positive |
+| `age` | number | ✅ | Positive |
+| `sex` | string | ✅ | `"male"` or `"female"` |
+| `activity` | string | No | `"sedentary"`, `"light"`, `"moderate"`, `"active"`, `"very_active"` |
+| `measurementDate` | string | No | ISO date, defaults to today |
+
+**Response 201:**
+
+```json
+{
+  "measurement": {
+    "id": 4,
+    "weight_kg": "70.00",
+    "height_cm": "175.00",
+    "age": 30,
+    "sex": "male",
+    "activity_level": "moderate",
+    "bmi": "22.9",
+    "bmi_category": "Normal",
+    "bmr": 1649,
+    "daily_calories": 2556,
+    "measurement_date": "2026-04-02T00:00:00.000Z",
+    "created_at": "2026-04-02T04:12:07.114Z"
+  }
+}
+```
+
+**Example:**
+
+```bash
+curl -X POST http://YOUR_EC2_IP/api/measurements \
+  -H "Content-Type: application/json" \
+  -d '{"weightKg":70,"heightCm":175,"age":30,"sex":"male","activity":"moderate"}'
+```
+
+### GET /api/measurements
+
+Return all measurements ordered by date descending.
+
+```bash
+curl http://YOUR_EC2_IP/api/measurements
+```
+
+**Response 200:**
+
+```json
+{ "rows": [ { ...measurement... }, ... ] }
+```
+
+### GET /api/measurements/trends
+
+Return 30-day daily average BMI.
+
+```bash
+curl http://YOUR_EC2_IP/api/measurements/trends
+```
+
+**Response 200:**
+
+```json
+{ "rows": [ { "day": "2026-04-02T00:00:00.000Z", "avg_bmi": "22.9" } ] }
+```
+
+### GET /health
+
+Application health check (served via Nginx on port 80).
+
+```bash
+curl http://YOUR_EC2_IP/health
+```
+
+**Response 200:**
+
+```json
+{ "status": "ok", "environment": "production" }
+```
+
+---
+
+## Development Guide
+
+### Local Development
+
+```bash
+# Clone
 git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git
 cd 3-tier-docker-compose-monitoring-ubuntu
 
-# 2. Create .env
+# Configure
 cp .env.example .env
-# Edit .env: Set FRONTEND_URL=http://localhost
+# Set FRONTEND_URL=http://localhost in .env
 
-# 3. Start development stack
-docker compose up
+# Build and start
+docker compose up -d --build
 
-# 4. Access application
-# Frontend: http://localhost
-# Backend API: http://localhost:3000
-# Backend Health: http://localhost:3000/health
+# Tail logs
+docker compose logs -f
 ```
 
-**Hot Reload Development:**
+### Changing the Backend
 
-For faster iteration without rebuilding containers:
-
-```bash
-# Backend (with nodemon):
-cd backend
-npm install
-npm run dev  # Watches src/ for changes
-
-# Frontend (with Vite):
-cd frontend
-npm install
-npm run dev  # Opens http://localhost:5173
-```
-
-### Making Changes
-
-#### Backend Changes
-
-**Add New API Endpoint:**
-
-1. Edit `backend/src/routes.js`:
-
-```javascript
-// Add new endpoint
-router.get('/api/measurements/:id', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM measurements WHERE id = $1',
-      [req.params.id]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-```
-
-2. Rebuild and test:
+1. Edit files in `backend/src/`
+2. Rebuild and redeploy:
 
 ```bash
 docker compose up -d --build backend
 docker compose logs -f backend
-curl http://localhost:3000/api/measurements/1
 ```
 
-#### Frontend Changes
+3. Test:
 
-**Add New Component:**
-
-1. Create `frontend/src/components/MyComponent.jsx`:
-
-```jsx
-import { useState } from 'react';
-
-export function My Component() {
-  const [data, setData] = useState(null);
-  
-  return (
-    <div>
-      <h2>My New Feature</h2>
-      {/* Your JSX here */}
-    </div>
-  );
-}
+```bash
+curl http://localhost/api/measurements
+curl -X POST http://localhost/api/measurements \
+  -H "Content-Type: application/json" \
+  -d '{"weightKg":65,"heightCm":170,"age":25,"sex":"female","activity":"light"}'
 ```
 
-2. Import in `frontend/src/App.jsx`:
+### Changing the Frontend
 
-```jsx
-import { MyComponent } from './components/MyComponent';
-
-function App() {
-  return (
-    <>
-      {/* Existing components */}
-      <MyComponent />
-    </>
-  );
-}
-```
-
-3. Rebuild and test:
+1. Edit files in `frontend/src/`
+2. Rebuild:
 
 ```bash
 docker compose up -d --build frontend
 # Visit http://localhost in browser
 ```
 
-#### Database Changes
+### Adding a Database Column
 
-**Add New Table/Column:**
-
-1. Create migration file `database/init-scripts/04-add-new-table.sql`:
+1. Create a new SQL file in `database/init-scripts/` (e.g. `04-add-notes.sql`):
 
 ```sql
-CREATE TABLE IF NOT EXISTS user_preferences (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL,
-  theme VARCHAR(20) DEFAULT 'light',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+ALTER TABLE measurements ADD COLUMN IF NOT EXISTS notes TEXT;
 ```
 
-2. For existing databases, run migrations:
+2. For **new deployments** — the file runs automatically on `docker compose up`.
+
+3. For **existing deployments** — run the migration manually:
 
 ```bash
-# Option 1: Recreate volume (loses data)
-docker compose down -v
-docker compose up -d
-
-# Option 2: Exec into container and run SQL
-cat database/init-scripts/04-add-new-table.sql | \
-  docker compose exec -T postgres psql -U bmi_user -d bmidb
-```
-
-### Testing
-
-#### Manual Testing
-
-```bash
-# Backend health check
-curl http://localhost:3000/health
-
-# Create measurement
-curl -X POST http://localhost:3000/api/measurements \
-  -H "Content-Type: application/json" \
-  -d '{"weight":70,"height":175,"age":30,"gender":"male","activityLevel":"moderate"}'
-
-# Get all measurements
-curl http://localhost:3000/api/measurements
-
-# Frontend smoke test
-curl -I http://localhost
-```
-
-#### Automated Testing (Optional)
-
-Add test scripts to `backend/package.json`:
-
-```json
-{
-  "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
-  }
-}
+docker compose exec postgres psql -U bmi_user -d bmidb \
+  -c "ALTER TABLE measurements ADD COLUMN IF NOT EXISTS notes TEXT;"
 ```
 
 ### Debugging
 
-#### View Logs
-
 ```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f backend
-
-# Last 100 lines
-docker compose logs --tail=100 backend
-
-# With timestamps
-docker compose logs -f --timestamps backend
-```
-
-#### Access Container Shell
-
-```bash
-# Backend container
+# Shell into a container
 docker compose exec backend sh
-
-# Database container
 docker compose exec postgres sh
 
-# Check Node.js process
-docker compose exec backend ps aux
-
 # Check environment variables
-docker compose exec backend env
-```
+docker compose exec backend env | grep -E 'NODE|DATABASE|PORT'
 
-#### Database Debugging
+# Test DB connectivity from backend
+docker compose exec backend ping postgres
+docker compose exec backend nc -zv postgres 5432
 
-```bash
-# Connect to PostgreSQL
+# psql shell
 docker compose exec postgres psql -U bmi_user -d bmidb
 
-# Common queries:
-\dt                     # List tables
-\d measurements         # Describe table
-SELECT * FROM measurements LIMIT 5;
-SELECT COUNT(*) FROM measurements;
+# List tables
+\dt
+
+# Describe table
+\d measurements
+
+# Check specific rows
+SELECT * FROM measurements ORDER BY created_at DESC LIMIT 5;
 ```
 
 ---
 
-## Operations
+## Operations Runbook
 
-### Service Management
-
-#### Start Services
+### Start / Stop / Restart
 
 ```bash
-# Start all (Phase 1 only)
-docker compose up -d
-
-# Start with monitoring (Phase 1 + 2)
+# Start everything (app + monitoring)
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
-# Start specific service
-docker compose up -d backend
-
-# Start with build (rebuild images)
-docker compose up -d --build
-```
-
-#### Stop Services
-
-```bash
-# Stop all
-docker compose down
-
-# Stop with monitoring
+# Graceful stop (keeps volumes)
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
 
-# Stop but keep volumes (preserve data)
-docker compose down
-
-# Stop and remove volumes (DELETES DATA!)
-docker compose down -v
-```
-
-#### Restart Services
-
-```bash
-# Restart all
-docker compose restart
-
-# Restart specific service
+# Restart a single service
 docker compose restart backend
 
-# Restart with monitoring
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart
+# Restart with rebuild
+docker compose up -d --build backend
 ```
 
-#### View Status
+### Force-recreate Without Rebuild
 
 ```bash
-# Service status
-docker compose ps
-
-# Detailed status
-docker compose ps -a
-
-# Resource usage
-docker stats
-
-# Container inspect
-docker compose exec backend docker inspect $(docker compose ps -q backend)
+# Restart app containers without touching database or monitoring
+docker compose up -d --force-recreate --no-deps backend frontend
 ```
 
-### Database Operations
-
-#### Backup Database
+### Update Running Stack from Git
 
 ```bash
-# Backup to file
-docker compose exec postgres pg_dump -U bmi_user bmidb > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# Compressed backup
-docker compose exec postgres pg_dump -U bmi_user bmidb | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
-
-# Automated daily backup (add to crontab)
-0 2 * * * cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu && \
-  docker compose exec -T postgres pg_dump -U bmi_user bmidb | gzip > \
-  /home/ubuntu/backups/bmidb_$(date +\%Y\%m\%d).sql.gz
+cd ~/3-tier-docker-compose-monitoring-ubuntu
+git pull origin main
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 ```
 
-#### Restore Database
+### Full Teardown and Rebuild
 
 ```bash
-# From SQL file
+# Stop + remove containers (data is safe in volumes)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
+
+# Rebuild images and start
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
+```
+
+### Teardown Including Data (⚠️ deletes database)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down --volumes
+```
+
+### Database Backup
+
+```bash
+# Dump to file
+docker compose exec postgres pg_dump -U bmi_user bmidb \
+  > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Compressed dump
+docker compose exec postgres pg_dump -U bmi_user bmidb \
+  | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+```
+
+### Database Restore
+
+```bash
+# From plain SQL
 cat backup.sql | docker compose exec -T postgres psql -U bmi_user -d bmidb
 
-# From compressed file
+# From compressed
 gunzip -c backup.sql.gz | docker compose exec -T postgres psql -U bmi_user -d bmidb
-
-# Drop and recreate database first (if needed)
-docker compose exec postgres psql -U bmi_user -d postgres -c "DROP DATABASE IF NOT EXISTS bmidb;"
-docker compose exec postgres psql -U bmi_user -d postgres -c "CREATE DATABASE bmidb;"
-cat backup.sql | docker compose exec -T postgres psql -U bmi_user -d bmidb
 ```
 
-#### Database Maintenance
+### View Logs
 
 ```bash
-# Vacuum (reclaim storage)
-docker compose exec postgres psql -U bmi_user -d bmidb -c "VACUUM FULL;"
-
-# Analyze (update statistics)
-docker compose exec postgres psql -U bmi_user -d bmidb -c "ANALYZE;"
-
-# Check database size
-docker compose exec postgres psql -U bmi_user -d bmidb -c "\l+"
-
-# Check table sizes
-docker compose exec postgres psql -U bmi_user -d bmidb -c "
-  SELECT
-    schemaname AS schema,
-    tablename AS table,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
-  FROM pg_tables
-  WHERE schemaname = 'public'
-  ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-"
-```
-
-### Logs & Debugging
-
-#### View Logs
-
-```bash
-# Follow all logs
+# All containers, follow
 docker compose logs -f
 
-# Specific service
+# Single container
 docker compose logs -f backend
 
-# Last N lines
-docker compose logs --tail=100 frontend
+# Last 200 lines
+docker compose logs --tail=200 backend
 
-# With timestamps
-docker compose logs -f --timestamps backend
-
-# Since specific time
-docker compose logs --since 2024-02-14T10:00 backend
+# Filter errors (bash only)
+docker compose logs backend 2>&1 | grep -i error
 ```
 
-#### Log Rotation
-
-Logs are automatically rotated by Docker. Configure in `docker-compose.yml`:
-
-```yaml
-services:
-  backend:
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"    # Max file size
-        max-file: "3"      # Number of files to keep
-```
-
-#### Debugging Containers
+### Disk Space
 
 ```bash
-# Check if container is running
-docker compose ps backend
+# Host disk
+df -h
 
-# Inspect container
-docker compose exec backend sh
+# Docker objects
+docker system df
 
-# Check environment variables
-docker compose exec backend env
+# Clean unused images and build cache (safe — won't touch running containers)
+docker image prune -af --filter "until=24h"
+docker builder prune -af
 
-# Check running processes
-docker compose exec backend ps aux
-
-# Check network connectivity
-docker compose exec backend ping postgres
-docker compose exec backend curl http://backend:3000/health
-
-# File system check
-docker compose exec backend ls -la /app
-docker compose exec backend cat /app/package.json
+# Nuclear clean (removes ALL unused docker objects)
+docker system prune -af
 ```
 
-### Health Checks
-
-#### Manual Health Checks
+### GitHub Actions Runner
 
 ```bash
-# Backend API health
-curl http://localhost:3000/health
+# Check runner status
+cd ~/actions-runner
+sudo ./svc.sh status
 
-# Expected response:
-# {"status":"healthy","timestamp":"2026-02-15T..."}
+# Start / stop
+sudo ./svc.sh start
+sudo ./svc.sh stop
 
-# Frontend availability
-curl -I http://localhost
+# View runner logs
+sudo journalctl -u actions.runner.* --since "30 minutes ago" -f
 
-# Prometheus health
-curl http://localhost:9090/-/healthy
-
-# Grafana health
-curl -I http://localhost:3001/api/health
+# Re-register runner (if token expired)
+cd ~/actions-runner
+./config.sh remove --token OLD_TOKEN
+# Get new token from GitHub: Settings → Actions → Runners → New self-hosted runner
+./config.sh --url https://github.com/USERNAME/REPO --token NEW_TOKEN
+sudo ./svc.sh install ubuntu
+sudo ./svc.sh start
 ```
 
-#### Automated Health Check Script
-
-Use provided script:
+### Health Check Script
 
 ```bash
 chmod +x scripts/health-check.sh
 ./scripts/health-check.sh
 ```
 
-**Output:**
-
-```
-========================================
-BMI Application Health Check
-========================================
-✓ Backend:    Healthy (200 OK)
-✓ Frontend:   Accessible (200 OK)
-✓ Prometheus: Healthy (200 OK)
-✓ Grafana:    Accessible (200 OK)
-✓ Loki:       Ready (200 OK)
-========================================
-All services are healthy!
-========================================
-```
-
-### Maintenance Tasks
-
-#### Update Application
-
-```bash
-# 1. Pull latest code
-git pull origin main
-
-# 2. Rebuild and restart
-docker compose up -d --build
-
-# 3. Verify
-docker compose ps
-./scripts/health-check.sh
-```
-
-#### Update Docker Images
-
-```bash
-# Pull latest base images
-docker compose pull
-
-# Rebuild with latest
-docker compose up -d --build
-
-# Remove old images
-docker image prune -af
-```
-
-#### Clean Up Resources
-
-```bash
-# Remove stopped containers
-docker container prune
-
-# Remove unused images
-docker image prune -a
-
-# Remove unused volumes (CAREFUL! This deletes data)
-docker volume prune
-
-# Remove unused networks
-docker network prune
-
-# Remove everything unused (NUCLEAR OPTION)
-docker system prune -af --volumes
-```
-
-#### Disk Space Monitoring
-
-```bash
-# Check disk usage
-df -h
-
-# Docker disk usage
-docker system df
-
-# Detailed Docker usage
-docker system df -v
-
-# Find large files
-du -sh /* | sort -h
-
-# Clean Docker build cache
-docker builder prune -a
-```
-
 ---
 
-## Monitoring & Observability
+## Monitoring & Dashboards
 
-### Accessing Dashboards
+### Access
 
-| Dashboard | URL | Credentials | Purpose |
-|-----------|-----|-------------|---------|
-| **Grafana** | http://YOUR_EC2_IP:3001 | admin / admin | Visualization platform |
-| **Prometheus** | http://YOUR_EC2_IP:9090 | None | Metrics database & queries |
-| **Loki** | http://localhost:3100 | None | Log API (use via Grafana) |
+| URL | Service | Login |
+|-----|---------|-------|
+| `http://YOUR_EC2_IP:3001` | Grafana | admin / admin (change on first login) |
+| `http://YOUR_EC2_IP:9090` | Prometheus | none |
 
-### Pre-Configured Dashboards
+### Add a Custom Grafana Dashboard
 
-#### 1. Docker Container Monitoring
+1. Build the dashboard in the Grafana UI
+2. Export it: Dashboard **Settings** → **JSON Model** → copy
+3. Save as `monitoring/grafana/dashboards/my-dashboard.json`
+4. Grafana auto-loads it within 10 seconds (no restart)
 
-**Metrics Displayed:**
-- CPU usage per container (%)
-- Memory usage per container (MB)
-- Network I/O (RX/TX bytes)
-- Container restart count
-- Container uptime
-
-**PromQL Queries Used:**
-
-```promql
-# CPU usage
-rate(container_cpu_usage_seconds_total{name=~".+"}[5m]) * 100
-
-# Memory usage
-container_memory_usage_bytes{name=~".+"}  
-
-# Network received
-rate(container_network_receive_bytes_total{name=~".+"}[5m])
-
-# Network transmitted
-rate(container_network_transmit_bytes_total{name=~".+"}[5m])
-```
-
-#### 2. Docker Logs Dashboard
-
-**Log Streams:**
-- All Container Logs (real-time, 10s refresh)
-- Log Rate by Container (graph)
-- Error Logs (filtered for "error|exception|fail")
-- Frontend Logs (Nginx access/error)
-- Backend Logs (Node.js application)
-- Database Logs (PostgreSQL)
-
-**LogQL Queries Used:**
-
-```logql
-# All logs
-{container_name=~"/bmi-.*"}
-
-# Error logs only
-{container_name=~"/bmi-.*"} |~ "(?i)error|exception|fail"
-
-# Specific service
-{container_name="/bmi-frontend"}
-```
-
-#### 3. Application Logs
-
-**Focused Views:**
-- Combined application logs (backend + frontend + postgres)
-- Log rate trends
-- Error filtering and highlighting
-
-### Custom Metrics
-
-#### Add New Prometheus Scrape Target
+### Add a Prometheus Scrape Target
 
 Edit `monitoring/prometheus/prometheus.yml`:
 
 ```yaml
 scrape_configs:
-  # Existing targets...
-  
-  # Add new target
-  - job_name: 'my-new-service'
+  - job_name: 'my-service'
     static_configs:
       - targets: ['my-service:9999']
     metrics_path: '/metrics'
     scrape_interval: 15s
 ```
 
-Restart Prometheus:
+Then:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml restart prometheus
 ```
 
-#### Create Custom Dashboard
+### Useful PromQL Queries
 
-1. **In Grafana UI:**
-   - Click "+" → "Dashboard"
-   - Add Panel → Choose visualization
-   - Write PromQL query
-   - Save dashboard
+```promql
+# Container memory working set (bytes)
+container_memory_working_set_bytes{name=~"bmi-.*"}
 
-2. **Export to JSON:**
-   - Dashboard settings → JSON Model
-   - Copy JSON
-   - Save to `monitoring/grafana/dashboards/my-dashboard.json`
+# Container CPU % per container
+sum(rate(container_cpu_usage_seconds_total{name=~"bmi-.*"}[5m])) by (name) * 100
 
-3. **Auto-provision:**
-   - On next Grafana restart, dashboard loads automatically
+# Host total CPU %
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 
-### Alerting (Optional)
+# Host memory used %
+(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
 
-#### Configure Prometheus Alerts
+# Disk usage % per mountpoint
+(1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} /
+     node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) * 100
 
-Create `monitoring/prometheus/alerts.yml`:
-
-```yaml
-groups:
-  - name: application
-    rules:
-      - alert: HighMemoryUsage
-        expr: container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"} > 0.9
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} memory usage > 90%"
-          
-      - alert: ContainerDown
-        expr: up{job="backend"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Backend container is down"
+# Network receive rate (bytes/s)
+rate(container_network_receive_bytes_total{name=~"bmi-.*"}[5m])
 ```
 
-Add to `prometheus.yml`:
+### Useful LogQL Queries
 
-```yaml
-rule_files:
-  - "/etc/prometheus/alerts.yml"
+```logql
+# All app containers
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres"}
 
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ['alertmanager:9093']
+# Errors only
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres"} |~ "(?i)error|exception|fail|fatal|panic"
+
+# Backend only
+{container_name="/bmi-backend"}
+
+# HTTP requests in frontend logs
+{container_name="/bmi-frontend"} |~ "(?i)GET|POST|PUT|DELETE"
+
+# Log rate graph
+sum by (container_name) (count_over_time({container_name=~"/bmi-.*"}[1m]))
 ```
 
 ---
 
-## Deployment
+## Deployment Workflows
 
-### Manual Deployment
+### Automated (Normal Path)
 
-**On EC2:**
+```
+git push origin main
+        ↓
+GitHub webhook → self-hosted runner on EC2
+        ↓
+git pull → docker compose build → docker compose up --force-recreate
+        ↓
+Health checks (backend + frontend + Grafana + Prometheus)
+        ↓
+docker image prune
+        ↓
+Deployment summary logged to GitHub Actions
+```
+
+Monitor at: `https://github.com/YOUR_USERNAME/YOUR_REPO/actions`
+
+### Manual Deploy
 
 ```bash
-# 1. Pull latest code
 cd ~/3-tier-docker-compose-monitoring-ubuntu
 git pull origin main
-
-# 2. Rebuild and deploy
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --build
-
-# 3. Verify
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
-./scripts/health-check.sh
 ```
 
-### Automated Deployment (CI/CD)
+### Rollback
 
-**With Self-Hosted Runner:**
+**Option 1 — Git revert (triggers CI/CD):**
 
 ```bash
-# Just push code to GitHub
-git add .
-git commit -m "feat: Add new feature"
+git revert HEAD
 git push origin main
-
-# GitHub Actions runner on EC2 will:
-# 1. Pull latest code
-# 2. Build Docker images
-# 3. Deploy containers
-# 4. Run health checks
-# 5. Report status
-
-# Monitor in GitHub:
-# https://github.com/YOUR_USERNAME/YOUR_REPO/actions
+# CI/CD redeploys previous version
 ```
 
-**Workflow File:** `.github/workflows/deploy.yml`
-
-**Triggers:**
-- Push to `main` branch → Automatic deployment
-- Manual trigger → Click "Run workflow" in GitHub Actions
-
-**Duration:** ~2-3 minutes (with self-hosted runner)
-
-### Rollback Strategy
-
-#### Git-Based Rollback
+**Option 2 — Manual on EC2:**
 
 ```bash
-# 1. Find commit to revert to
+cd ~/3-tier-docker-compose-monitoring-ubuntu
 git log --oneline -10
-
-# 2. Revert to specific commit
-git revert HEAD  # Revert last commit
-# OR
-git checkout COMMIT_HASH
-
-# 3. Push reversion
-git push origin main
-
-# 4. CI/CD will auto-deploy previous version
-```
-
-#### Manual Rollback
-
-```bash
-# 1. Tag current version (before deploying)
-git tag v1.0.0
-git push origin v1.0.0
-
-# 2. Later, rollback to tag
-git checkout v1.0.0
+git checkout <previous-commit-hash>
 docker compose up -d --build
-
-# 3. Return to main when ready
-git checkout main
 ```
 
-#### Docker Image Rollback
+**Option 3 — Tag before deploying:**
 
 ```bash
-# 1. List recent images
-docker images | grep bmi
+# Before a deploy
+git tag v1.2.0
+git push origin v1.2.0
 
-# 2. Re-tag old image as latest
-docker tag sarowaralam/bmi-backend:main-abc123 sarowaralam/bmi-backend:latest
-
-# 3. Restart with old image
-docker compose up -d --no-build
+# Rollback
+git checkout v1.2.0
+docker compose up -d --build
 ```
 
-### Zero-Downtime Deployment
-
-The workflow uses `--no-deps` and `--force-recreate` flags:
+### Skip CI/CD for a Commit
 
 ```bash
-# Recreate only application containers without affecting database
-docker compose up -d --force-recreate --no-deps backend frontend
+git commit -m "docs: update README [skip ci]"
 ```
-
-**Why Zero-Downtime?**
-- Database container keeps running (no connection drop)
-- Backend restarts quickly (~5s due to health check wait)
-- Frontend serves cached content during brief backend restart
-- Monitoring continues collecting metrics
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### Container shows (unhealthy)
 
-#### Issue: Services showing "unhealthy"
-
-**Symptoms:**
 ```bash
-$ docker compose ps
-NAME            STATUS
-bmi-backend     Up (unhealthy)
-bmi-frontend    Up (unhealthy)
-```
-
-**Diagnosis:**
-```bash
-# Check logs for errors
-docker compose logs backend
-
-# Check health endpoint
-curl http://localhost:3000/health
-
-# Inspect health check
-docker inspect $(docker compose ps -q backend) | jq '.[0].State.Health'
-```
-
-**Solutions:**
-1. **Wait 1-2 minutes** - Services need time to fully start
-2. Check environment variables: `docker compose exec backend env`
-3. Verify database connection: `docker compose exec postgres pg_isready`
-4. Restart service: `docker compose restart backend`
-
-#### Issue: Cannot access application from browser
-
-**Symptoms:**
-- `curl http://YOUR_EC2_IP` times out
-- Browser shows "Connection refused"
-
-**Diagnosis:**
-```bash
-# Check if frontend is running
-docker compose ps frontend
-
-# Check if port 80 is bound
-sudo netstat -tulpn | grep :80
-
-# Check from EC2
-curl http://localhost
-```
-
-**Solutions:**
-1. **Check Security Group**: Allow port 80 from 0.0.0.0/0
-2. **Use Public IP**: Not private IP (10.x.x.x)
-3. **Stop conflicting services**: `sudo systemctl stop apache2`
-4. **Verify frontend logs**: `docker compose logs frontend`
-
-#### Issue: Database connection errors
-
-**Symptoms:**
-```
-Error: connect ECONNREFUSED
-Error: password authentication failed
-```
-
-**Diagnosis:**
-```bash
-# Check if postgres is running
-docker compose ps postgres
+# See what the health check actually returned
+docker inspect bmi-backend | grep -A 20 '"Health"'
 
 # Check logs
-docker compose logs postgres
+docker compose logs --tail=50 backend
 
-# Test connection from backend
+# Manually trigger health check
+curl http://localhost/health
+```
+
+**Most common cause:** backend fails to connect to PostgreSQL on first start. Wait 30–60 s for postgres to fully initialise, then:
+
+```bash
+docker compose restart backend
+```
+
+### Cannot access the application from the browser
+
+1. Verify the EC2 Security Group allows port 80 from `0.0.0.0/0`
+2. Confirm you are using the **public** IP (not `10.x.x.x`)
+3. Check frontend is running: `docker compose ps bmi-frontend`
+4. Check port binding: `sudo ss -tlpn | grep :80`
+
+### Database connection errors (ECONNREFUSED / authentication failed)
+
+```bash
+# Is postgres running?
+docker compose ps bmi-postgres
+
+# Can the backend reach it?
 docker compose exec backend ping postgres
-docker compose exec backend nc -zv postgres 5432
+
+# Is the password correct?
+docker compose exec postgres pg_isready -U bmi_user -d bmidb
+
+# Check env vars loaded into backend
+docker compose exec backend env | grep DATABASE
 ```
 
-**Solutions:**
-1. Check `.env` file exists: `ls -la .env`
-2. Verify password matches: `cat .env | grep POSTGRES_PASSWORD`
-3. Recreate with environment: `docker compose up -d --force-recreate backend`
-4. Check database is ready: `docker compose exec postgres pg_isready -U bmi_user`
+### No logs in Grafana (backend or postgres)
 
-#### Issue: Disk space full
+**Backend:** Confirm `ecosystem.config.js` redirects to `/proc/1/fd/1` and `/proc/1/fd/2`, then rebuild.
 
-**Symptoms:**
-```
-ERROR: no space left on device
-Runner crashed: System.IO.IOException
-```
-
-**Diagnosis:**
 ```bash
-# Check disk usage
-df -h
-
-# Check Docker usage
-docker system df
+docker compose up -d --build backend
+docker logs bmi-backend  # Must show startup messages
 ```
 
-**Solutions:**
+**Postgres:** Confirm `command:` block with `-c log_statement=mod` is in `docker-compose.yml`, then recreate:
+
 ```bash
-# Clean Docker resources
-docker system prune -af --volumes
-
-# Clean old images
-docker images | grep "<none>" | awk '{print $3}' | xargs docker rmi -f
-
-# Clean logs
-sudo find /var/lib/docker/containers -name "*.log" -exec truncate -s 0 {} \;
-
-# Clean runner logs
-rm -rf ~/actions-runner/_diag/*.log
+docker compose up -d --force-recreate postgres
+docker logs bmi-postgres  # Must show connection log lines
 ```
 
-#### Issue: Grafana shows "datasource not found"
+### Grafana shows "datasource not found"
 
-**Symptoms:**
-- Dashboards show "datasource loki was not found"
-- Panels empty despite metrics/logs existing
-
-**Diagnosis:**
 ```bash
-# Check Grafana datasources
-curl http://localhost:3001/api/datasources | jq
-
-# Check datasource config
+# Verify datasource UIDs
 docker compose exec grafana cat /etc/grafana/provisioning/datasources/datasources.yml
+
+# Restart Grafana to re-apply provisioning
+docker compose restart grafana
 ```
 
-**Solutions:**
-1. **Restart Grafana**: `docker compose restart grafana`
-2. **Check datasource UIDs** match dashboard JSON:
-   - Datasources: `uid: prometheus`, `uid: loki`
-   - Dashboards: `"datasource": {"type": "prometheus", "uid": "prometheus"}`
-3. **Recreate Grafana volume**:
-   ```bash
-   docker compose down
-   docker volume rm bmi-grafana-data
-   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-   ```
+### Loki shows (unhealthy)
 
-#### Issue: GitHub Actions runner offline
+This is a false positive. Verify Loki is actually working:
 
-**Symptoms:**
-- Runner shows "Offline" in GitHub
-- Workflows queue but don't start
-
-**Diagnosis:**
 ```bash
-# Check runner service
+curl http://localhost:3100/ready    # → "ready"
+```
+
+If it returns `ready`, the container is functional; the Docker healthcheck is misconfigured. Check Grafana → Explore → Loki datasource — if it queries successfully, ignore the status.
+
+### Runner shows Offline in GitHub
+
+```bash
 cd ~/actions-runner
-sudo ./svc.sh status
-
-# Check logs
-sudo journalctl -u actions.runner.* --since "10 minutes ago"
+sudo systemctl status actions.runner.*   # Is it running?
+sudo ./svc.sh restart                    # Restart it
 ```
 
-**Solutions:**
-```bash
-# Restart runner
-cd ~/actions-runner
-sudo ./svc.sh stop
-sudo ./svc.sh start
-
-# If still offline, reconfigure
-./config.sh remove --token NEW_TOKEN
-# Get new token from GitHub: Settings → Actions → Runners → New self-hosted runner
-./config.sh --url https://github.com/YOUR_USERNAME/YOUR_REPO --token NEW_TOKEN
-sudo ./svc.sh install
-sudo ./svc.sh start
-```
-
-### Logs & Debugging
-
-#### Enable Debug Logging
-
-**Backend:**
-
-Edit `backend/src/server.js`:
-
-```javascript
-// Add at top
-const DEBUG = process.env.DEBUG === 'true';
-
-// Use throughout
-if (DEBUG) console.log('Debug info:', data);
-```
-
-Set in `.env`:
-
-```env
-DEBUG=true
-```
-
-Restart:
+If it still shows offline after restart, the registration token may have expired. Re-register:
 
 ```bash
-docker compose up -d --force-recreate backend
-docker compose logs -f backend
+./config.sh remove --token $(cat .runner | python3 -c "import sys,json;print(json.load(sys.stdin)['clientId'])" 2>/dev/null || echo "YOUR_OLD_TOKEN")
+# Get new token from GitHub → Settings → Actions → Runners → New self-hosted runner
+./config.sh --url https://github.com/USERNAME/REPO --token NEW_TOKEN
+sudo ./svc.sh install ubuntu && sudo ./svc.sh start
 ```
 
-**Docker Compose:**
+### Disk full during CI/CD build
 
 ```bash
-# Verbose output
-docker compose --verbose up -d
-
-# Debug specific service
-docker compose logs -f --timestamps backend | tee backend-debug.log
-```
-
-#### Performance Profiling
-
-**Backend API Response Time:**
-
-```bash
-# Add timing to requests
-curl -w "\nTime: %{time_total}s\n" http://localhost:3000/api/measurements
-```
-
-**Database Query Performance:**
-
-```sql
--- Connect to database
-docker compose exec postgres psql -U bmi_user -d bmidb
-
--- Enable query timing
-\timing
-
--- Analyze slow query
-EXPLAIN ANALYZE SELECT * FROM measurements WHERE user_id = 1;
-
--- Check slow queries
-SELECT query, calls, total_time, mean_time
-FROM pg_stat_statements
-ORDER BY total_time DESC
-LIMIT 10;
-```
-
-**Container Resource Usage:**
-
-```bash
-# Real-time stats
-docker stats
-
-# Historical metrics in Grafana
-# Dashboard: Docker Container Monitoring
-# Panel: CPU Usage, Memory Usage
+df -h                                             # Check usage
+docker system df                                  # Check Docker usage
+docker image prune -af --filter "until=24h"       # Remove old images
+docker builder prune -af                          # Remove build cache
 ```
 
 ---
 
 ## Security
 
-### Security Best Practices
+### What Is Already Protected
 
-#### Implemented Security Measures
+| Area | Control |
+|------|---------|
+| Database port | Not published to host; only reachable on `bmi-backend-network` |
+| Backend port | Not published to host; only reachable via Nginx proxy |
+| Credentials | In `.env` (gitignored); never hardcoded |
+| SQL injection | Parameterised queries (`$1`, `$2`, ...) in all database calls |
+| CORS | Restricted to `FRONTEND_URL` in production |
+| Container networking | Three isolated networks; frontend cannot reach database directly |
+| Container image | Alpine base images (minimal attack surface) |
 
-✅ **Container Security:**
-- Non-root user in backend container (`nodejs` user)
-- Minimal base images (Alpine Linux)
-- No unnecessary packages installed
-- Read-only root filesystems where possible
+### Recommended Hardening for Production
 
-✅ **Network Security:**
-- Segmented networks (backend, frontend, monitoring)
-- Database not exposed to internet
-- Backend API not exposed to internet
-- Only port 80 externally accessible
+**1. Change Grafana admin password** on first login (Grafana will prompt you).
 
-✅ **Secrets Management:**
-- Environment variables for sensitive data
-- `.env` file in `.gitignore`
-- No hardcoded credentials in code
-- Docker secrets support (optional)
+**2. HTTPS** — add Nginx + Certbot:
 
-✅ **Application Security:**
-- Input validation on frontend
-- Parameterized SQL queries (prevents SQL injection)
-- CORS configured for frontend only
-- Health check endpoints don't expose sensitive data
-
-✅ **Access Control:**
-- PostgreSQL user with minimal privileges
-- Grafana admin password change prompted
-- SSH key-based EC2 access only
-- Security Group restricting inbound traffic
-
-#### Additional Security Hardening
-
-**1. HTTPS with Let's Encrypt (Recommended for Production)**
-
-Add Nginx + Certbot for SSL/TLS:
-
-```yaml
-# docker-compose.prod.yml
-services:
-  nginx-proxy:
-    image: nginxproxy/nginx-proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - certs:/etc/nginx/certs
-      
-  letsencrypt:
-    image: nginxproxy/acme-companion
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - certs:/etc/nginx/certs
-    depends_on:
-      - nginx-proxy
+```bash
+sudo apt-get install certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
 ```
 
-**2. Secrets Management with Docker Secrets**
-
-```yaml
-# docker-compose.secrets.yml
-services:
-  backend:
-    secrets:
-      - db_password
-      
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt
-```
-
-**3. Rate Limiting**
-
-Add to `frontend/nginx.conf`:
+**3. Rate limiting** — add to `frontend/nginx.conf`:
 
 ```nginx
-limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
-
+limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
 location /api/ {
-    limit_req zone=api_limit burst=20 nodelay;
+    limit_req zone=api burst=20 nodelay;
     proxy_pass http://backend:3000/api/;
 }
 ```
 
-**4. Security Headers**
-
-Add to `frontend/nginx.conf`:
+**4. Security headers** — add to `frontend/nginx.conf`:
 
 ```nginx
 add_header X-Frame-Options "SAMEORIGIN" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header X-XSS-Protection "1; mode=block" always;
-add_header Referrer-Policy "no-referrer-when-downgrade" always;
-add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 ```
 
-**5. Database Encryption at Rest**
-
-Enable in `docker-compose.yml`:
-
-```yaml
-services:
-  postgres:
-    environment:
-      - POSTGRES_INITDB_ARGS=--data-checksums
-    command: 
-      - postgres
-      - -c
-      - ssl=on
-      - -c
-      - ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
-      - -c
-      - ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
-```
-
-### Vulnerability Scanning
-
-**Scan Docker Images:**
+**5. Image vulnerability scanning:**
 
 ```bash
-# Using Trivy
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
   aquasec/trivy image bmi-backend:latest
-
-# Using Docker Scout
-docker scout cves bmi-backend:latest
 ```
 
-**Scan for Secrets in Code:**
+### Security Checklist
 
-```bash
-# Using gitleaks
-docker run --rm -v $(pwd):/src zricethezav/gitleaks:latest \
-  detect --source /src --verbose
-```
-
-### Compliance Checklist
-
-- [ ] All credentials stored in `.env` (not hardcoded)
-- [ ] `.env` file in `.gitignore` and never committed
-- [ ] Strong passwords (16+ characters, mixed case, numbers, symbols)
-- [ ] SSH keys used (not passwords) for EC2 access
-- [ ] Security Group allows only necessary ports
-- [ ] HTTPS enabled (if public-facing)
-- [ ] Grafana admin password changed from default
-- [ ] PostgreSQL accessible only within Docker network
-- [ ] Regular backups scheduled and tested
-- [ ] Logs reviewed periodically for anomalies
-- [ ] Docker images updated regularly
-- [ ] Vulnerability scans performed monthly
+- [ ] `POSTGRES_PASSWORD` is strong and unique
+- [ ] `.env` is never committed (verify with `git status`)
+- [ ] Grafana password changed from `admin`
+- [ ] Security Group restricts Grafana (3001) and Prometheus (9090) to your IP only
+- [ ] SSH uses key auth only (no password auth on EC2)
+- [ ] Regular `docker image prune` to remove old layers
+- [ ] HTTPS enabled if publicly accessible
 
 ---
 
 ## Performance
 
-### Performance Characteristics
+### Measured Resource Usage (t2.medium at idle)
 
-**Resource Usage (Measured on t2.medium):**
+| Container | CPU | RAM |
+|-----------|-----|-----|
+| bmi-frontend | <1% | ~20 MB |
+| bmi-backend | <1% | ~80 MB |
+| bmi-postgres | <1% | ~50 MB |
+| prometheus | 1–2% | ~200 MB |
+| grafana | <1% | ~150 MB |
+| loki | <1% | ~100 MB |
+| promtail | <1% | ~50 MB |
+| cadvisor | 1–2% | ~100 MB |
+| node-exporter | <1% | ~20 MB |
+| **Total** | **~7%** | **~770 MB** |
 
-| Component | CPU (idle) | CPU (load) | Memory | Disk |
-|-----------|------------|------------|--------|------|
-| Frontend | <1% | 5-10% | ~20MB | ~50MB |
-| Backend | <1% | 10-20% | ~80MB | ~100MB |
-| Postgres | <1% | 15-30% | ~50MB | ~200MB + data |
-| Prometheus | 1-2% | 3-5% | ~200MB | ~500MB |
-| Grafana | <1% | 2-4% | ~150MB | ~100MB |
-| Loki | <1% | 2-3% | ~100MB | ~300MB |
-| Promtail | <1% | 1-2% | ~50MB | ~10MB |
-| cAdvisor | 1-2% | 2-3% | ~100MB | ~10MB |
-| Node Exporter | <1% | <1% | ~20MB | ~10MB |
-| Runner | 0% | 50%+ | ~500MB | ~500MB |
-| **Total** | ~10% | Up to 100% | ~2.5-3GB | ~2-3GB |
+During a CI/CD build, the runner can use 50–100% CPU for 30–60 s while building Docker images.
 
-**API Performance:**
+### Tuning Tips
 
-| Endpoint | Avg Response | P95 | P99 |
-|----------|--------------|-----|-----|
-| `GET /health` | <10ms | 15ms | 20ms |
-| `GET /api/measurements` | 20-50ms | 100ms | 200ms |
-| `POST /api/measurements` | 30-80ms | 150ms | 250ms |
-| Frontend (cached) | <50ms | 100ms | 150ms |
+**PostgreSQL connection pool** is set to `max: 20` in `backend/src/db.js`. For a t2.medium running a single-backend-instance app, 20 is more than adequate.
 
-### Optimization Tips
-
-#### 1. Database Optimization
-
-**Enable Connection Pooling:**
-
-Already configured in `backend/src/db.js`:
-
-```javascript
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20,            // Max connections
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-```
-
-**Add Indexes:**
-
-```sql
--- Connect to database
-docker compose exec postgres psql -U bmi_user -d bmidb
-
--- Add index on frequently queried columns
-CREATE INDEX idx_measurements_user_id ON measurements(user_id);
-CREATE INDEX idx_measurements_created_at ON measurements(created_at);
-
--- Check index usage
-SELECT schemaname, tablename, indexname, idx_scan
-FROM pg_stat_user_indexes
-ORDER BY idx_scan DESC;
-```
-
-**Configure PostgreSQL:**
-
-Add to `docker-compose.yml`:
+**Prometheus retention** is capped at 15 days / 10 GB in `docker-compose.monitoring.yml`. Reduce if disk is constrained:
 
 ```yaml
-services:
-  postgres:
-    command:
-      - postgres
-      - -c
-      - shared_buffers=256MB
-      - -c
-      - effective_cache_size=1GB
-      - -c
-      - maintenance_work_mem=64MB
-      - -c
-      - checkpoint_completion_target=0.9
-      - -c
-      - wal_buffers=16MB
-      - -c
-      - default_statistics_target=100
-      - -c
-      - random_page_cost=1.1
-      - -c
-      - effective_io_concurrency=200
+command:
+  - --storage.tsdb.retention.time=7d
+  - --storage.tsdb.retention.size=5GB
 ```
 
-#### 2. Frontend Optimization
-
-**Enable Gzip Compression:** (Already configured)
-
-**Add Browser Caching:**
-
-Add to `frontend/nginx.conf`:
-
-```nginx
-location /assets/ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
-}
-```
-
-**Minify JavaScript:**
-
-Vite already minifies in production. Verify in `frontend/vite.config.js`:
-
-```javascript
-export default defineConfig({
-  build: {
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,  // Remove console.logs
-      },
-    },
-  },
-});
-```
-
-#### 3. Monitoring Optimization
-
-**Reduce Prometheus Scrape Frequency:**
-
-Edit `monitoring/prometheus/prometheus.yml`:
-
-```yaml
-global:
-  scrape_interval: 30s  # Increase from 15s
-  evaluation_interval: 30s
-```
-
-**Reduce Loki Retention:**
-
-Edit `monitoring/loki/loki-config.yml`:
+**Loki retention** — edit `monitoring/loki/loki-config.yml`:
 
 ```yaml
 limits_config:
-  retention_period: 168h  # 7 days (reduce if disk constrained)
+  retention_period: 168h    # 7 days
 ```
 
-**Limit Grafana Refresh:**
-
-In Grafana dashboards, change refresh from 10s to 30s or 1m.
-
-#### 4. Container Optimization
-
-**Use .dockerignore:**
-
-Already configured. Verify `backend/.dockerignore`:
-
-```
-node_modules/
-npm-debug.log
-.git/
-.env
-*.md
-```
-
-**Multi-stage Builds:** (Already using for frontend)
-
-**Reduce Image Layers:**
-
-Combine RUN commands in Dockerfiles:
-
-```dockerfile
-# Bad (3 layers)
-RUN apt-get update
-RUN apt-get install -y curl
-RUN apt-get clean
-
-# Good (1 layer)
-RUN apt-get update && \
-    apt-get install -y curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-```
-
-### Scaling Considerations
-
-#### Vertical Scaling (Easier)
-
-Upgrade EC2 instance:
-- t2.medium → t2.large (8GB RAM, 2 vCPU)
-- t2.large → t2.xlarge (16GB RAM, 4 vCPU)
-
-**When to scale:**
-- CPU consistently >70%
-- Memory consistently >80%
-- Swap usage increasing
-- API response times degrading
-
-#### Horizontal Scaling (Advanced)
-
-For multi-instance deployment:
-
-1. **Load Balancer:** AWS ALB distributing traffic
-2. **Database:** RDS PostgreSQL (managed, HA)
-3. **Sessions:** Redis for shared session storage
-4. **Monitoring:** Centralized Prometheus + Thanos
-5. **CI/CD:** Deploy to multiple instances
-
-**Not covered in this repo** (out of scope for learning project).
-
----
-
-## Contributing
-
-### How to Contribute
-
-We welcome contributions! Here's how:
-
-1. **Fork the repository**
-   ```bash
-   # Click "Fork" button on GitHub
-   git clone https://github.com/YOUR_USERNAME/3-tier-docker-compose-monitoring-ubuntu.git
-   ```
-
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-
-3. **Make your changes**
-   - Follow existing code style
-   - Add tests if applicable
-   - Update documentation
-
-4. **Commit your changes**
-   ```bash
-   git add .
-   git commit -m "feat: Add amazing feature"
-   ```
-
-5. **Push to your fork**
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-
-6. **Open a Pull Request**
-   - Go to original repository
-   - Click "New Pull Request"
-   - Describe your changes clearly
-
-### Contribution Guidelines
-
-**Code Style:**
-- Use consistent indentation (2 spaces for JavaScript/YAML, 4 for Python)
-- Add comments for complex logic
-- Follow existing naming conventions
-- Keep functions small and focused
-
-**Commit Messages:**
-- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
-- Be descriptive: `feat: Add health check endpoint for monitoring integration`
-- Reference issues: `fix: Resolve database connection timeout (closes #123)`
-
-**Pull Request Guidelines:**
-- Clear title and description
-- Link related issues
-- Include screenshots for UI changes
-- Ensure all tests pass (if applicable)
-- Respond to code review feedback promptly
-
-### Areas for Contribution
-
-**Easy (Good First Issues):**
-- Improve documentation
-- Add more examples to README
-- Fix typos
-- Add helpful comments
-
-**Medium:**
-- Add new Grafana dashboards
-- Improve error handling
-- Add logging enhancements
-- Optimize Docker images
-
-**Advanced:**
-- Add Kubernetes manifests
-- Implement automated testing
-- Add Terraform for AWS provisioning
-- Create Helm charts
-
-### Code of Conduct
-
-- Be respectful and constructive
-- Welcome newcomers
-- Focus on what is best for the community
-- Show empathy towards other community members
-
----
-
-## Support
-
-### Getting Help
-
-**Documentation:**
-- [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md) - Application deployment guide
-- [PHASE2-MONITORING.md](PHASE2-MONITORING.md) - Monitoring setup guide
-- [SETUP-GITHUB-RUNNER.md](SETUP-GITHUB-RUNNER.md) - CI/CD configuration
-- [QUICKSTART-RUNNER.md](QUICKSTART-RUNNER.md) - Quick reference
-
-**Troubleshooting:**
-- Check [Troubleshooting](#troubleshooting) section above
-- Review [Common Issues](#common-issues)
-- Search [GitHub Issues](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues)
-
-**Community:**
-- Open an [Issue](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues/new)
-- Start a [Discussion](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/discussions)
-
-### Reporting Issues
-
-When reporting bugs, please include:
-
-1. **Environment:**
-   - EC2 instance type
-   - Ubuntu version: `lsb_release -a`
-   - Docker version: `docker --version`
-   - Docker Compose version: `docker compose version`
-
-2. **Steps to Reproduce:**
-   - What command did you run?
-   - What did you expect to happen?
-   - What actually happened?
-
-3. **Logs:**
-   ```bash
-   docker compose logs > all-logs.txt
-   docker compose ps >> all-logs.txt
-   ```
-   Attach `all-logs.txt` to issue
-
-4. **Screenshots:**
-   - If UI-related, include browser console errors
-
----
-
-## License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
-### MIT License Summary
-
-✅ **Permissions:**
-- Commercial use
-- Modification
-- Distribution
-- Private use
-
-❌ **Limitations:**
-- Liability
-- Warranty
-
-**Attribution Required:** Include original copyright notice in copies.
+**Grafana dashboard refresh** — change from 15 s to 30 s or 1 m in panel settings to reduce Prometheus query load.
 
 ---
 
 ## Roadmap
 
-### Completed ✅
-
-- [x] **Phase 1:** Three-tier application deployment
-- [x] **Phase 2:** Comprehensive monitoring stack
-- [x] **Phase 3:** Self-hosted CI/CD with GitHub Actions
-- [x] Docker Compose orchestration
-- [x] PostgreSQL with automated migrations
-- [x] Prometheus metrics collection
-- [x] Grafana dashboards
-- [x] Loki log aggregation
-- [x] Health checks for all services
-- [x] Production-ready documentation
-
-### Planned 📋
-
-- [ ] **Phase 4:** HTTPS with Let's Encrypt
-  - Automatic SSL certificate provisioning
-  - Nginx reverse proxy configuration
-  - HTTP to HTTPS redirect
-
-- [ ] **Phase 5:** Kubernetes Migration
-  - Helm charts
-  - StatefulSets for database
-  - HorizontalPodAutoscaler
-  - Ingress configuration
-
-- [ ] **Phase 6:** Advanced Observability
-  - Distributed tracing (Jaeger/Tempo)
-  - Application Performance Monitoring
-  - Custom business metrics
-  - Advanced alerting rules
-
-- [ ] **Phase 7:** High Availability
-  - Multi-AZ deployment
-  - Database replication
-  - Load balancing
-  - Failover automation
-
-### Future Enhancements 💡
-
-- Automated testing (unit, integration, e2e)
-- Infrastructure as Code (Terraform)
-- Blue-green deployments
-- Canary releases
-- Cost optimization guides
-- Performance benchmarking suite
-- Security scanning automation
-- Compliance reporting
+| Status | Item |
+|--------|------|
+| ✅ | Three-tier application (React / Node / PostgreSQL) |
+| ✅ | Docker Compose orchestration (3 services) |
+| ✅ | Monitoring stack (Prometheus / Grafana / Loki) |
+| ✅ | Self-hosted GitHub Actions CI/CD |
+| ✅ | Pre-provisioned Grafana dashboards (23 panels) |
+| ✅ | Zero-downtime rolling deploys |
+| 📋 | HTTPS with Let's Encrypt |
+| 📋 | Automated unit + integration tests in CI |
+| 📋 | Kubernetes migration (Helm charts) |
+| 📋 | Multi-AZ with RDS (PostgreSQL HA) |
+| 📋 | Distributed tracing (Tempo) |
+| 📋 | Terraform for EC2 provisioning |
 
 ---
 
-## Acknowledgments
+## Contributing
 
-### Technologies Used
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Commit with conventional format: `feat:`, `fix:`, `docs:`, `refactor:`
+4. Push and open a Pull Request
 
-- **[Docker](https://www.docker.com/)** - Container platform
-- **[Docker Compose](https://docs.docker.com/compose/)** - Multi-container orchestration
-- **[PostgreSQL](https://www.postgresql.org/)** - Relational database
-- **[Node.js](https://nodejs.org/)** - JavaScript runtime
-- **[Express.js](https://expressjs.com/)** - Web framework
-- **[React](https://react.dev/)** - Frontend library
-- **[Nginx](https://nginx.org/)** - Web server & reverse proxy
-- **[Prometheus](https://prometheus.io/)** - Monitoring system
-- **[Grafana](https://grafana.com/)** - Visualization platform
-- **[Loki](https://grafana.com/oss/loki/)** - Log aggregation
-- **[GitHub Actions](https://github.com/features/actions)** - CI/CD automation
-- **[AWS EC2](https://aws.amazon.com/ec2/)** - Cloud compute
-
-### Inspiration
-
-This project was created as a comprehensive learning resource for:
-- DevOps engineers beginning their journey
-- Teams transitioning to containerized applications
-- Organizations implementing observability
-- Anyone curious about production infrastructure patterns
-
-### Contributors
-
-Created and maintained by **Md. Sarowar Alam**
-
-Special thanks to all contributors who have helped improve this project!
-
----
-
-## Final Notes
-
-### Project Philosophy
-
-This repository embodies several key principles:
-
-1. **Learning First:** Designed to teach, not just work
-2. **Production Ready:** Real patterns used in production
-3. **Well Documented:** Every decision explained
-4. **Iterative Approach:** Build understanding through phases
-5. **Best Practices:** Industry-standard tools and methods
-
-### What Makes This Different?
-
-- ✅ **Complete:** All 3 phases (app + monitoring + CI/CD)
-- ✅ **Documented:** 5000+ lines of documentation
-- ✅ **Self-Hosted:** No external dependencies (Docker Hub)
-- ✅ **Production-Grade:** Security, monitoring, automation
-- ✅ **Tested:** Deployed on real AWS infrastructure
-- ✅ **Maintained:** Active support and updates
-
-### Success Metrics
-
-By completing all phases, you will have:
-- Deployed a 3-tier containerized application
-- Implemented comprehensive monitoring
-- Automated your deployment pipeline
-- Learned Docker, monitoring, and CI/CD
-- Gained practical DevOps experience
-
-**Total time investment:** 3-4 hours  
-**Skills gained:** Priceless
-
----
-
-**Ready to get started?** Follow [PHASE1-DEPLOYMENT.md](PHASE1-DEPLOYMENT.md) for step-by-step instructions!
-
-**Questions?** Open an [issue](https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu/issues)!
-
-**Happy deploying! 🚀**
+**Contribution areas:**
+- Additional Grafana dashboards
+- Improved error handling
+- Automated test coverage
+- Kubernetes manifests
+- Terraform modules
 
 ---
 

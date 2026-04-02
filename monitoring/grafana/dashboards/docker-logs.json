@@ -37,7 +37,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"}",
+          "expr": "{container_name=~\"/bmi-backend|/bmi-frontend|/bmi-postgres|/cadvisor|/grafana|/loki|/node-exporter|/prometheus|/promtail\"}",
           "queryType": "range",
           "refId": "A"
         }
@@ -127,7 +127,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum(rate({job=\"docker\"}[1m])) by (container_name)",
+          "expr": "sum by (container_name) (count_over_time({container_name=~\"/bmi-backend|/bmi-frontend|/bmi-postgres|/cadvisor|/grafana|/loki|/node-exporter|/prometheus|/promtail\"}[1m]))",
           "legendFormat": "{{container_name}}",
           "queryType": "range",
           "refId": "A"
@@ -165,7 +165,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{job=\"docker\"} |~ \"(?i)error|exception|fail|fatal|panic\"",
+          "expr": "{container_name=~\"/bmi-backend|/bmi-frontend|/bmi-postgres|/cadvisor|/grafana|/loki|/node-exporter|/prometheus|/promtail\"} |~ \"(?i)error|exception|fail|fatal|panic\"",
           "queryType": "range",
           "refId": "A"
         }

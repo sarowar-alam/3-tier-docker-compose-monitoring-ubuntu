@@ -297,7 +297,7 @@ If status shows "starting" or "unhealthy", wait a bit longer or check logs (see 
 ### Test Backend Health Endpoint
 
 ```bash
-curl http://localhost:3000/health
+docker exec -it bmi-frontend curl http://bmi-backend:3000/health
 ```
 
 **Expected output:**

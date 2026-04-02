@@ -267,6 +267,11 @@ Dashboards are auto-loaded! No manual import needed.
      - Search for errors
      - Time-based log browsing
 
+```
+{container_name=~"/bmi-backend|/bmi-frontend|/bmi-postgres|/cadvisor|/grafana|/loki|/node-exporter|/prometheus|/promtail | ~(?i)error|exception|fail|fatal|panic"}
+```
+
+
 ### Exploring Dashboards:
 
 **Container CPU Usage:**

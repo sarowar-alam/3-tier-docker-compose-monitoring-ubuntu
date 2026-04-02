@@ -1,4 +1,4 @@
-name: Deploy Application
+﻿name: Deploy Application
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     name: Build Images and Deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout code
@@ -17,7 +17,7 @@ jobs:
 
       - name: Pull latest code
         run: |
-          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           git fetch origin main
           git reset --hard origin/main
           git pull origin main
@@ -25,14 +25,14 @@ jobs:
       - name: Build application images
         run: |
           set -e
-          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           echo "Building Phase 1 application images..."
           docker compose -f docker-compose.yml build --no-cache
           
       - name: Deploy application with monitoring
         run: |
           set -e
-          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           echo "Deploying application containers (Phase 1)..."
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --force-recreate --no-deps backend frontend
           
@@ -44,41 +44,41 @@ jobs:
 
       - name: Health check
         run: |
-          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           
           echo "Checking backend health..."
           if docker compose exec -T frontend curl -f http://backend:3000/health > /dev/null 2>&1; then
-            echo "✓ Backend is healthy"
+            echo "âœ“ Backend is healthy"
           else
-            echo "✗ Backend health check failed"
+            echo "âœ— Backend health check failed"
             exit 1
           fi
           
           echo "Checking frontend..."
           if curl -f http://localhost > /dev/null 2>&1; then
-            echo "✓ Frontend is accessible"
+            echo "âœ“ Frontend is accessible"
           else
-            echo "✗ Frontend is not accessible"
+            echo "âœ— Frontend is not accessible"
             exit 1
           fi
           
           echo "Checking Grafana..."
           if curl -f http://localhost:3001 > /dev/null 2>&1; then
-            echo "✓ Grafana is accessible"
+            echo "âœ“ Grafana is accessible"
           else
-            echo "⚠ Grafana check failed (may still be starting)"
+            echo "âš  Grafana check failed (may still be starting)"
           fi
           
           echo "Checking Prometheus..."
           if curl -f http://localhost:9090/-/healthy > /dev/null 2>&1; then
-            echo "✓ Prometheus is healthy"
+            echo "âœ“ Prometheus is healthy"
           else
-            echo "⚠ Prometheus check failed"
+            echo "âš  Prometheus check failed"
           fi
 
       - name: Show container status
         run: |
-          cd ~/3-tier-docker-compose-monitoring-ubuntu
+          cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           echo "=== All Container Status ==="
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml ps
 
@@ -89,7 +89,7 @@ jobs:
         run: |
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           echo "=========================================="
-          echo "✅ Deployment completed successfully!"
+          echo "âœ… Deployment completed successfully!"
           echo "=========================================="
           echo "Phase 1 - Application:"
           echo "  Frontend: http://${PUBLIC_IP}"
@@ -101,3 +101,5 @@ jobs:
           echo ""
           echo "Total Containers: 9 (3 app + 6 monitoring)"
           echo "=========================================="
+
+

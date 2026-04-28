@@ -1687,10 +1687,10 @@ The monitoring stack (Prometheus, Grafana, Loki) is unchanged. You add kube-stat
 
 ---
 
-## 🧑‍💻 Author
+## 🧑‍💻 Project Lead
 
 *Md. Sarowar Alam*  
-Lead DevOps Engineer, Hogarth Worldwide  
+Lead DevOps Engineer, WPP Production
 📧 Email: sarowar@hotmail.com  
 🔗 LinkedIn: https://www.linkedin.com/in/sarowar/
 

@@ -12,6 +12,22 @@ jobs:
     runs-on: self-hosted
     
     steps:
+      - name: Ensure docker group membership
+        run: |
+          echo "=== Docker Group Check ==="
+          echo "Current user: $(whoami)"
+          echo "Current groups: $(groups)"
+
+          if ! groups ubuntu | grep -q docker; then
+            echo "Adding ubuntu to docker group..."
+            sudo usermod -aG docker ubuntu
+          else
+            echo "OK: ubuntu is already in docker group"
+          fi
+
+          echo "Verifying docker access..."
+          docker ps > /dev/null 2>&1 && echo "OK: Docker is accessible" || echo "WARNING: Docker not yet accessible (runner may need restart)"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -33,12 +49,26 @@ jobs:
         run: |
           set -e
           cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
+
+          echo "Ensuring postgres is running..."
+          docker compose -f docker-compose.yml up -d postgres
+
+          echo "Waiting for postgres to be healthy..."
+          for i in $(seq 1 12); do
+            if docker compose -f docker-compose.yml exec -T postgres pg_isready -U bmi_user -d bmidb > /dev/null 2>&1; then
+              echo "Postgres is healthy"
+              break
+            fi
+            echo "Waiting for postgres... attempt $i/12"
+            sleep 5
+          done
+
           echo "Deploying application containers (Phase 1)..."
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --force-recreate --no-deps backend frontend
-          
+
           echo "Ensuring monitoring stack is running (Phase 2)..."
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d prometheus grafana loki promtail cadvisor node-exporter
-          
+
           echo "Waiting for services to stabilize..."
           sleep 15
 
@@ -48,32 +78,32 @@ jobs:
           
           echo "Checking backend health..."
           if docker compose exec -T frontend curl -f http://backend:3000/health > /dev/null 2>&1; then
-            echo "âœ“ Backend is healthy"
+            echo "OK: Backend is healthy"
           else
-            echo "âœ— Backend health check failed"
+            echo "FAIL: Backend health check failed"
             exit 1
           fi
           
           echo "Checking frontend..."
           if curl -f http://localhost > /dev/null 2>&1; then
-            echo "âœ“ Frontend is accessible"
+            echo "OK: Frontend is accessible"
           else
-            echo "âœ— Frontend is not accessible"
+            echo "FAIL: Frontend is not accessible"
             exit 1
           fi
           
           echo "Checking Grafana..."
           if curl -f http://localhost:3001 > /dev/null 2>&1; then
-            echo "âœ“ Grafana is accessible"
+            echo "OK: Grafana is accessible"
           else
-            echo "âš  Grafana check failed (may still be starting)"
+            echo "WARNING: Grafana check failed (may still be starting)"
           fi
           
           echo "Checking Prometheus..."
           if curl -f http://localhost:9090/-/healthy > /dev/null 2>&1; then
-            echo "âœ“ Prometheus is healthy"
+            echo "OK: Prometheus is healthy"
           else
-            echo "âš  Prometheus check failed"
+            echo "WARNING: Prometheus check failed"
           fi
 
       - name: Show container status
@@ -89,7 +119,7 @@ jobs:
         run: |
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           echo "=========================================="
-          echo "âœ… Deployment completed successfully!"
+          echo "Deployment completed successfully!"
           echo "=========================================="
           echo "Phase 1 - Application:"
           echo "  Frontend: http://${PUBLIC_IP}"

@@ -14,11 +14,13 @@ scrape_configs:
     docker_sd_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
-        filters:
-          - name: label
-            values: ["com.docker.compose.project=3-tier-docker-compose-monitoring-ubuntu"]
     
     relabel_configs:
+      # Only scrape containers that have a compose service label (skip bare docker run containers)
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        action: keep
+        regex: '.+'
+
       # Set the path to the container log
       - source_labels: ['__meta_docker_container_id']
         target_label: '__path__'
@@ -29,7 +31,7 @@ scrape_configs:
         target_label: 'container_name'
         replacement: '$1'
       
-      # Add container labels
+      # Add service label from compose
       - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
         target_label: 'service'
 

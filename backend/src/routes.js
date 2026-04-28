@@ -13,17 +13,24 @@ router.post('/measurements',async(req,res)=>{
     if (weightKg <= 0 || heightCm <= 0 || age <= 0) {
       return res.status(400).json({ error: 'Invalid values: must be positive numbers' });
     }
+    if (!['male','female'].includes(sex)) {
+      return res.status(400).json({ error: 'Invalid sex: must be male or female' });
+    }
+    const validActivity = ['sedentary','light','moderate','active','very_active'];
+    if (activity && !validActivity.includes(activity)) {
+      return res.status(400).json({ error: 'Invalid activity level' });
+    }
     
     const m=calculateMetrics({weightKg,heightCm,age,sex,activity});
     const date = measurementDate || new Date().toISOString().split('T')[0];
     const q=`INSERT INTO measurements (weight_kg,height_cm,age,sex,activity_level,bmi,bmi_category,bmr,daily_calories,measurement_date,created_at)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()) RETURNING *`;
-    const v=[weightKg,heightCm,age,sex,activity,m.bmi,m.bmiCategory,m.bmr,m.dailyCalories,date];
+    const v=[weightKg,heightCm,age,sex,activity||'sedentary',m.bmi,m.bmiCategory,m.bmr,m.dailyCalories,date];
     const r=await db.query(q,v);
     res.status(201).json({measurement:r.rows[0]});
   }catch(e){
     console.error('Error creating measurement:', e);
-    res.status(500).json({error: e.message || 'Failed to create measurement'});
+    res.status(500).json({error: 'Failed to create measurement'});
   }
 });
 

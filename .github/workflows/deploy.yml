@@ -31,18 +31,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Bootstrap project directory
+        run: |
+          set -e
+          PROJECT_DIR="/home/ubuntu/3-tier-docker-compose-monitoring-ubuntu"
+
+          # Clone repo if this is a fresh server and it doesn't exist yet
+          if [ ! -d "${PROJECT_DIR}/.git" ]; then
+            echo "Project directory not found — cloning repository..."
+            git clone https://github.com/sarowar-alam/3-tier-docker-compose-monitoring-ubuntu.git "${PROJECT_DIR}"
+            echo "OK: Repository cloned to ${PROJECT_DIR}"
+          else
+            echo "OK: Project directory exists"
+          fi
+
+          # Fail fast if .env is missing (one-time manual step, never committed to git)
+          if [ ! -f "${PROJECT_DIR}/.env" ]; then
+            echo ""
+            echo "=========================================================="
+            echo "ERROR: .env file not found at ${PROJECT_DIR}/.env"
+            echo "=========================================================="
+            echo ""
+            echo "This is a one-time manual step required before the first CI/CD run:"
+            echo ""
+            echo "  ssh ubuntu@YOUR_EC2_IP"
+            echo "  cd ${PROJECT_DIR}"
+            echo "  cp .env.example .env"
+            echo "  nano .env"
+            echo "  # Required: POSTGRES_PASSWORD=<strong-password>"
+            echo "  # Required: FRONTEND_URL=http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo 'YOUR_EC2_IP')"
+            echo ""
+            echo "Then re-run this workflow."
+            exit 1
+          fi
+
+          echo "OK: .env file exists"
+
       - name: Pull latest code
         run: |
           cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           git fetch origin main
           git reset --hard origin/main
-          git pull origin main
 
       - name: Build application images
         run: |
           set -e
           cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
-          echo "Building Phase 1 application images..."
+          echo "Building Phase 2 application images..."
           docker compose -f docker-compose.yml build --no-cache
           
       - name: Deploy application with monitoring
@@ -55,7 +90,7 @@ jobs:
 
           echo "Waiting for postgres to be healthy..."
           for i in $(seq 1 12); do
-            if docker compose -f docker-compose.yml exec -T postgres pg_isready -U bmi_user -d bmidb > /dev/null 2>&1; then
+            if docker compose -f docker-compose.yml exec -T postgres pg_isready > /dev/null 2>&1; then
               echo "Postgres is healthy"
               break
             fi
@@ -63,10 +98,10 @@ jobs:
             sleep 5
           done
 
-          echo "Deploying application containers (Phase 1)..."
+          echo "Deploying application containers (Phase 2)..."
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d --force-recreate --no-deps backend frontend
 
-          echo "Ensuring monitoring stack is running (Phase 2)..."
+          echo "Ensuring monitoring stack is running (Phase 3)..."
           docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d prometheus grafana loki promtail cadvisor node-exporter
 
           echo "Waiting for services to stabilize..."
@@ -77,10 +112,11 @@ jobs:
           cd /home/ubuntu/3-tier-docker-compose-monitoring-ubuntu
           
           echo "Checking backend health..."
-          if docker compose exec -T frontend curl -f http://backend:3000/health > /dev/null 2>&1; then
-            echo "OK: Backend is healthy"
+          if curl -sf http://localhost/health > /dev/null 2>&1; then
+            echo "OK: Backend is healthy (via Nginx /health proxy)"
           else
             echo "FAIL: Backend health check failed"
+            docker compose -f docker-compose.yml logs --tail=30 backend
             exit 1
           fi
           
@@ -121,11 +157,11 @@ jobs:
           echo "=========================================="
           echo "Deployment completed successfully!"
           echo "=========================================="
-          echo "Phase 1 - Application:"
+          echo "Phase 2 - Application:"
           echo "  Frontend: http://${PUBLIC_IP}"
           echo "  Backend API: http://${PUBLIC_IP}:3000 (internal)"
           echo ""
-          echo "Phase 2 - Monitoring:"
+          echo "Phase 3 - Monitoring:"
           echo "  Grafana: http://${PUBLIC_IP}:3001"
           echo "  Prometheus: http://${PUBLIC_IP}:9090"
           echo ""

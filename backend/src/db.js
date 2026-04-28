@@ -8,16 +8,16 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000, // Return error after 2 seconds if can't connect
 });
 
-// Handle pool errors
+// Handle pool errors — log but do not exit; PM2 will restart if the process becomes unhealthy
 pool.on('error', (err, client) => {
   console.error('Unexpected error on idle PostgreSQL client:', err);
-  process.exit(-1);
 });
 
 // Test connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('ERROR: Database connection failed:', err.message);
+    // Exit so PM2 / Docker restart policy can recover the process
     process.exit(1);
   } else {
     console.log('SUCCESS: Database connected successfully at:', res.rows[0].now);
